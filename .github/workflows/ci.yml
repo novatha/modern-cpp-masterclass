@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config:
+          - { name: "Clang 18", cc: clang-18, cxx: clang++-18 }
+          - { name: "GCC 13", cc: gcc-13, cxx: g++-13 }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake ${{ matrix.config.cc }} ${{ matrix.config.cxx }} lldb
+
+      - name: Configure (Release)
+        run: |
+          cmake --preset=release 2>/dev/null || cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${{ matrix.config.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }}
+
+      - name: Build
+        run: ninja -C build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Sanitizer build (Clang only)
+        if: matrix.config.name == 'Clang 18'
+        run: |
+          cmake -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${{ matrix.config.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DENABLE_SANITIZERS=ON
+          ninja -C build-asan
+          ctest --test-dir build-asan --output-on-failure
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LLVM (Homebrew)
+        run: brew install llvm ninja cmake
+
+      - name: Configure
+        run: |
+          export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+
+      - name: Build
+        run: ninja -C build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

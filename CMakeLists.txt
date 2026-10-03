@@ -1,0 +1,106 @@
+cmake_minimum_required(VERSION 3.20)
+project(ModernCppLearning VERSION 1.0.0 LANGUAGES CXX)
+
+# Enforce C++20 standard
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+
+# Export compile commands for language servers (clangd / ccls)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Configure strict compiler warnings & sanitizers
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wshadow
+        -Wnon-virtual-dtor
+        -Wold-style-cast
+        -Wcast-align
+        -Wunused
+        -Woverloaded-virtual
+        -Wconversion
+        -Wsign-conversion
+        -Wnull-dereference
+        -Wdouble-promotion
+        -Wformat=2
+    )
+endif()
+
+# Option for sanitizers (AddressSanitizer & UndefinedBehaviorSanitizer)
+option(ENABLE_SANITIZERS "Enable ASan and UBSan" OFF)
+if (ENABLE_SANITIZERS AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
+    message(STATUS "AddressSanitizer and UndefinedBehaviorSanitizer enabled")
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+endif()
+
+# Phase 1 executable
+add_executable(phase1_basics src/phase1_basics.cpp)
+# Mini-Project 1: Log Parsing (C++20 string_view & format)
+add_executable(mini_project_1 src/main.cpp src/log_parser.cpp)
+
+# ==============================================================================
+# Phase 2: Memory Management & Automated Testing
+# ==============================================================================
+
+# FetchContent is the modern CMake way to grab dependencies without a global package manager
+include(FetchContent)
+message(STATUS "Fetching Catch2 (Unit Testing Framework)...")
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.5.2
+)
+FetchContent_MakeAvailable(Catch2)
+
+# Mini-Project 2: MatrixBuffer Tests
+add_executable(test_matrix tests/test_matrix.cpp)
+target_include_directories(test_matrix PRIVATE include)
+target_link_libraries(test_matrix PRIVATE Catch2::Catch2WithMain)
+
+# Enable CTest runner
+enable_testing()
+include(Catch)
+catch_discover_tests(test_matrix)
+
+# ==============================================================================
+# Phase 3: Generic Programming & Concepts
+# ==============================================================================
+add_executable(mini_project_3 src/phase3_main.cpp)
+target_include_directories(mini_project_3 PRIVATE include)
+
+# ==============================================================================
+# Phase 4: Modern STL, Ranges & Functional Pipelines
+# ==============================================================================
+add_executable(mini_project_4 src/phase4_ranges.cpp)
+
+# ==============================================================================
+# Phase 5: Concurrency, Multithreading & Performance
+# ==============================================================================
+add_executable(mini_project_5 src/phase5_concurrency.cpp)
+
+# ==============================================================================
+# CAPSTONE PROJECT: Parallel N-1 Contingency Engine
+# ==============================================================================
+add_executable(capstone_project src/capstone_main.cpp)
+
+# ==============================================================================
+# Phase 6: Advanced Hardware Sympathy & C++23
+# ==============================================================================
+add_executable(mini_project_6 src/phase6_advanced.cpp)
+target_compile_features(mini_project_6 PRIVATE cxx_std_23)
+
+# ==============================================================================
+# Phase 1 Re-do: True C++20 Modules with LLVM
+# ==============================================================================
+add_executable(phase1_modules src/phase1_modules.cpp)
+target_compile_features(phase1_modules PRIVATE cxx_std_20)
+target_sources(phase1_modules
+  PUBLIC
+    FILE_SET CXX_MODULES FILES
+    src/grid_parser.cppm
+)

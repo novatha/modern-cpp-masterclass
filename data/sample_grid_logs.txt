@@ -1,0 +1,6 @@
+2026-10-01T08:00:00 [INFO] Substation_A initialization complete.
+2026-10-01T08:05:12 [WARN] Bus_12 voltage dropping (0.94 pu).
+2026-10-01T08:07:45 [CRITICAL] Transformer_T1 overloaded (115%).
+2026-10-01T08:10:00 [INFO] Load shedding protocol initiated.
+2026-10-01T08:15:30 [CRITICAL] Line_L42 tripped. N-1 contingency active.
+2026-10-01T08:20:00 [INFO] System stabilized. Voltage recovered to 0.98 pu.

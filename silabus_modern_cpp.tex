@@ -1,0 +1,494 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{tabularx}
+\usepackage{listings}
+
+\tcbuselibrary{breakable}
+
+\definecolor{uniblue}{RGB}{0,51,102}
+\definecolor{lightblue}{RGB}{220,235,250}
+\definecolor{lightgray}{RGB}{245,245,245}
+\definecolor{accentgreen}{RGB}{34,139,34}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=uniblue,
+    urlcolor=uniblue
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{uniblue}{RPS -- Pemrograman C++ Modern untuk Komputasi Teknik}}
+\fancyhead[R]{\small\textcolor{uniblue}{\thepage}}
+\fancyfoot[C]{\small\textcolor{gray}{Program Studi Teknik Elektro}}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{uniblue}\bfseries,
+    commentstyle=\color{accentgreen}\itshape,
+    stringstyle=\color{red!70!black},
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray!50},
+    backgroundcolor=\color{lightgray},
+    language=C++
+}
+
+\begin{document}
+
+% ====================================================================
+% HEADER / COVER
+% ====================================================================
+\begin{center}
+    {\Large\bfseries\textcolor{uniblue}{RENCANA PEMBELAJARAN SEMESTER (RPS)}}\\[0.3cm]
+    {\large Program Studi Teknik Elektro}\\[0.5cm]
+    \rule{\textwidth}{1.5pt}\\[0.4cm]
+    {\LARGE\bfseries Pemrograman C++ Modern\\untuk Komputasi Teknik}\\[0.2cm]
+    {\large\textit{Modern C++ Programming for Engineering Computation}}\\[0.4cm]
+    \rule{\textwidth}{1.5pt}
+\end{center}
+
+\vspace{0.5cm}
+
+% ====================================================================
+% IDENTITAS MATA KULIAH
+% ====================================================================
+\section*{Identitas Mata Kuliah}
+
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+    \toprule
+    \textbf{Kode Mata Kuliah}   & TTL-4XX \\
+    \textbf{SKS / Semester}     & 3 SKS (2 Teori + 1 Praktikum) / Semester VI--VII \\
+    \textbf{Prasyarat}          & Dasar Pemrograman (bahasa apa pun), Analisis Sistem Tenaga Listrik \\
+    \textbf{Dosen Pengampu}     & [Nama Dosen] \\
+    \textbf{Standar Bahasa}     & C++20 / C++23 (ISO/IEC 14882:2020, 14882:2024) \\
+    \textbf{Toolchain}          & LLVM Clang 17+, CMake 3.28+, Ninja, Catch2 \\
+    \bottomrule
+\end{tabularx}
+
+% ====================================================================
+% DESKRIPSI MATA KULIAH
+% ====================================================================
+\section*{Deskripsi Mata Kuliah}
+
+\begin{tcolorbox}[colback=lightblue, colframe=uniblue, title={\textbf{Deskripsi}}, fonttitle=\bfseries]
+Mata kuliah ini membekali mahasiswa dengan paradigma pemrograman C++ modern (C++20/C++23) yang berfokus pada \textbf{keamanan memori (\textit{memory safety})}, \textbf{abstraksi tanpa biaya (\textit{zero-cost abstractions})}, dan \textbf{komputasi berkinerja tinggi (\textit{high-performance computing})} untuk penyelesaian masalah di bidang teknik elektro. Seluruh studi kasus dan proyek berasal dari domain \textbf{Sistem Tenaga Listrik}, termasuk pemrosesan data telemetri SCADA, analisis aliran daya, dan penapisan kontingensi $N-k$.
+
+Mata kuliah ini secara eksplisit \textbf{meninggalkan pola-pola C++ warisan (\textit{legacy C++})} yang berbahaya --- seperti \texttt{new}/\texttt{delete} manual, \texttt{printf}, \textit{raw pointer arithmetic}, dan \texttt{void*} --- dan menggantinya dengan idiom modern yang aman, ekspresif, dan efisien.
+\end{tcolorbox}
+
+% ====================================================================
+% CAPAIAN PEMBELAJARAN
+% ====================================================================
+\section*{Capaian Pembelajaran Mata Kuliah (CPMK)}
+
+\begin{enumerate}[label=\textbf{CPMK-\arabic*}, leftmargin=2.5cm, itemsep=0.3cm]
+    \item \textbf{Memahami Filosofi C++ Modern.}
+    Mahasiswa mampu menjelaskan perbedaan fundamental antara idiom C++ warisan (\textit{legacy}) dan C++ modern (C++20/23), serta mengidentifikasi mengapa pola-pola lama berbahaya dalam komputasi teknik berkinerja tinggi.
+
+    \item \textbf{Menguasai Manajemen Memori yang Aman.}
+    Mahasiswa mampu menerapkan prinsip RAII (\textit{Resource Acquisition Is Initialization}), \textit{move semantics}, \textit{smart pointers}, dan \texttt{std::span} untuk mengelola sumber daya komputasi tanpa kebocoran memori (\textit{memory leak}).
+
+    \item \textbf{Menulis Kode Generik yang Aman.}
+    Mahasiswa mampu merancang \textit{template} fungsi dan kelas yang dibatasi oleh C++20 \textit{Concepts} (\texttt{requires}), sehingga kesalahan tipe data terdeteksi pada waktu kompilasi, bukan pada waktu eksekusi.
+
+    \item \textbf{Memanfaatkan Pemrosesan Data Fungsional.}
+    Mahasiswa mampu membangun \textit{data pipeline} menggunakan C++20 \texttt{<ranges>} dan \texttt{std::views} untuk memfilter, mentransformasi, dan mengagregasi data sensor secara \textit{lazy} (tanpa alokasi memori tambahan).
+
+    \item \textbf{Membangun Aplikasi Konkuren yang Aman.}
+    Mahasiswa mampu mengimplementasikan komputasi paralel menggunakan \texttt{std::jthread}, \texttt{std::stop\_token}, \texttt{std::scoped\_lock}, dan \texttt{std::atomic} untuk mempercepat simulasi teknik tanpa kondisi balapan (\textit{race condition}).
+
+    \item \textbf{Mengoptimalkan Kinerja pada Tingkat Perangkat Keras.}
+    Mahasiswa mampu menganalisis dampak tata letak memori (\textit{AoS vs SoA}) terhadap kinerja \textit{CPU Cache} dan menerapkan desain berorientasi data (\textit{Data-Oriented Design}) untuk komputasi matriks berskala besar.
+
+    \item \textbf{Mengintegrasikan Seluruh Konsep dalam Proyek Rekayasa.}
+    Mahasiswa mampu membangun mesin penapisan kontingensi $N-1$ yang paralel (\textit{Parallel N-1 Contingency Screening Engine}) sebagai demonstrasi penguasaan menyeluruh atas seluruh konsep C++ modern.
+\end{enumerate}
+
+% ====================================================================
+% RENCANA PEMBELAJARAN MINGGUAN
+% ====================================================================
+\newpage
+\section*{Rencana Pembelajaran Mingguan}
+
+% --- Minggu 1 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 1: Filosofi C++ Modern \& Ekosistem Toolchain}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-1 \hfill \textbf{Taksonomi Bloom:} C1--C2 (Mengingat, Memahami)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item Sejarah evolusi C++: C++98 $\to$ C++11 $\to$ C++17 $\to$ C++20 $\to$ C++23
+    \item Mengapa C++ warisan berbahaya: \textit{dangling pointers}, \textit{buffer overflow}, \textit{undefined behavior}
+    \item Instalasi dan konfigurasi: LLVM Clang, CMake, Ninja, \texttt{compile\_commands.json}
+    \item Program pertama: \texttt{std::format}, \texttt{std::println} (C++23)
+\end{itemize}
+
+\textbf{Praktikum:}
+Mengonfigurasi \texttt{CMakeLists.txt} minimal dan mengompilasi program \textit{Hello, Grid!} dengan \texttt{std::format}.
+
+\textbf{Tugas Mandiri:}
+Menulis esai singkat (500 kata): \textit{``Mengapa seorang insinyur tenaga listrik perlu memahami manajemen memori?''}
+\end{tcolorbox}
+
+% --- Minggu 2 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 2: Abstraksi Tanpa Biaya I --- \texttt{string\_view} \& Parsing}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-1 \hfill \textbf{Taksonomi Bloom:} C2--C3 (Memahami, Menerapkan)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item \texttt{std::string} vs \texttt{std::string\_view}: alokasi \textit{heap} vs jendela \textit{zero-copy}
+    \item \texttt{auto} dan \textit{structured bindings} (\texttt{auto [a, b] = ...})
+    \item \texttt{constexpr}: komputasi pada waktu kompilasi
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Mem-\textit{parsing} log telemetri SCADA gardu induk tanpa alokasi memori.
+
+\textbf{Praktikum (Mode Aktif):}
+Diberikan fungsi \textit{legacy} yang menggunakan \texttt{std::string}. Mahasiswa diminta merefaktor ke \texttt{std::string\_view} dan mengukur perbedaan waktu eksekusi.
+\end{tcolorbox}
+
+% --- Minggu 3 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 3: Kepemilikan Memori \& RAII}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-2 \hfill \textbf{Taksonomi Bloom:} C2--C4 (Memahami, Menganalisis)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item \textit{Stack} vs \textit{Heap}: di mana data hidup dan mati
+    \item Prinsip RAII: ``\textit{Jika konstruktor berhasil, destruktor pasti berjalan}''
+    \item \texttt{std::unique\_ptr} dan \texttt{std::shared\_ptr}
+    \item Mengapa \texttt{new}/\texttt{delete} manual dilarang di C++ modern
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Mengelola alokasi buffer matriks admitansi $\mathbf{Y}_{\text{bus}}$ menggunakan RAII.
+
+\textbf{Praktikum (Mode Aktif):}
+Diberikan kode yang mengandung \textit{memory leak}. Mahasiswa diminta menemukan dan memperbaikinya menggunakan \texttt{std::unique\_ptr}.
+\end{tcolorbox}
+
+% --- Minggu 4 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 4: \textit{Move Semantics} --- Memindahkan, Bukan Menyalin}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-2 \hfill \textbf{Taksonomi Bloom:} C3--C4 (Menerapkan, Menganalisis)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item \textit{Lvalue} vs \textit{Rvalue references} (\texttt{\&} vs \texttt{\&\&})
+    \item \textit{Move constructor} dan \textit{move assignment operator}
+    \item \texttt{std::move}: mentransfer kepemilikan sumber daya
+    \item Analogi: ``\textit{Gudang dan Kunci}'' --- memindahkan kunci, bukan membangun gudang baru
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Mentransfer buffer matriks impedansi 1000$\times$1000 antar-fungsi tanpa menyalin 8 MB data.
+
+\textbf{Praktikum (Mode Aktif):}
+Mengimplementasikan kelas \texttt{MatrixBuffer} lengkap dengan \textit{Rule of Five}. Membuktikan bahwa \texttt{std::move} menghindari alokasi \textit{heap} ganda menggunakan \textit{output} \texttt{std::cout} di konstruktor/destruktor.
+\end{tcolorbox}
+
+% --- Minggu 5 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 5: \texttt{std::span} \& Akses Memori yang Aman}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-2 \hfill \textbf{Taksonomi Bloom:} C3--C4 (Menerapkan, Menganalisis)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item Bahaya \textit{array decay} (\texttt{int arr[]} meluruh menjadi \texttt{int*})
+    \item \texttt{std::span<T>}: jendela aman ke dalam blok memori yang bersebelahan (\textit{contiguous})
+    \item Menggabungkan \texttt{std::span} dengan \texttt{MatrixBuffer} dari Minggu 4
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Memberikan \textit{view} aman ke dalam array tegangan bus $V_1, V_2, \ldots, V_n$ tanpa menyalin data.
+
+\textbf{Praktikum (Mode Aktif):}
+Menulis fungsi yang menerima \texttt{std::span<const double>} dan menghitung rata-rata tegangan bus. Membuktikan bahwa fungsi ini dapat menerima \texttt{std::vector}, \texttt{std::array}, dan \textit{C-style array} tanpa \textit{overloading}.
+\end{tcolorbox}
+
+% --- Minggu 6 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 6: Pengujian Otomatis (\textit{Unit Testing}) dengan Catch2}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-2, CPMK-7 \hfill \textbf{Taksonomi Bloom:} C3--C5 (Menerapkan, Mengevaluasi)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item Filosofi \textit{Test-Driven Development} (TDD)
+    \item Menulis \textit{test case} dengan Catch2: \texttt{TEST\_CASE}, \texttt{REQUIRE}, \texttt{SECTION}
+    \item Mengintegrasikan Catch2 ke CMake menggunakan \texttt{FetchContent}
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Menguji kebenaran \texttt{MatrixBuffer} (Minggu 4) dan fungsi parsing SCADA (Minggu 2).
+
+\textbf{Praktikum (Mode Aktif):}
+Mahasiswa menulis minimal 5 \textit{test case} untuk memvalidasi konstruksi, pemindahan (\textit{move}), dan akses elemen \texttt{MatrixBuffer}. Salah satu tes harus secara sengaja menguji kasus batas (\textit{edge case}).
+\end{tcolorbox}
+
+% --- Minggu 7 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 7: Review \& Persiapan UTS}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{Kegiatan:}
+\begin{itemize}[nosep]
+    \item Review komprehensif Minggu 1--6
+    \item Sesi tanya jawab dan klarifikasi konsep
+    \item \textit{Live coding challenge}: diberikan masalah domain, mahasiswa menyelesaikan menggunakan konsep Minggu 1--6
+    \item Pembahasan kisi-kisi UTS
+\end{itemize}
+\end{tcolorbox}
+
+% --- Minggu 8 ---
+\begin{tcolorbox}[colback=lightgray, colframe=gray, title={\textbf{Minggu 8: UJIAN TENGAH SEMESTER (UTS)}}, fonttitle=\bfseries]
+\textbf{Cakupan:} Minggu 1--6 (CPMK-1, CPMK-2) \\
+\textbf{Format:} 40\% Teori (esai konseptual) + 60\% Praktik (\textit{live coding} di komputer) \\
+\textbf{Durasi:} 120 menit
+
+\textbf{Contoh Soal Praktik:}
+\textit{``Diberikan struct \texttt{Transformator} dengan atribut \texttt{daya\_mva}, \texttt{impedansi}, dan \texttt{status}. Implementasikan kelas RAII yang mengelola array dinamis dari transformator tersebut, lengkap dengan move constructor, dan buktikan kebenarannya menggunakan Catch2.''}
+\end{tcolorbox}
+
+% --- Minggu 9 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 9: Pemrograman Generik \& \textit{Templates}}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-3 \hfill \textbf{Taksonomi Bloom:} C3--C4 (Menerapkan, Menganalisis)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item \textit{Function templates} dan \textit{class templates}
+    \item \textit{Template argument deduction} (CTAD)
+    \item \texttt{if constexpr}: percabangan pada waktu kompilasi
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Membangun fungsi \textit{solver} generik yang dapat memproses matriks \texttt{float} maupun \texttt{double} tanpa duplikasi kode.
+
+\textbf{Praktikum (Mode Aktif):}
+Diberikan dua fungsi identik (satu untuk \texttt{float}, satu untuk \texttt{double}). Mahasiswa menggabungkannya menjadi satu \textit{template} tunggal.
+\end{tcolorbox}
+
+% --- Minggu 10 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 10: C++20 \textit{Concepts} \& Batasan Tipe}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-3 \hfill \textbf{Taksonomi Bloom:} C4--C5 (Menganalisis, Mengevaluasi)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item Masalah \textit{template} tanpa batasan: pesan \textit{error} yang tidak terbaca manusia
+    \item Menulis \texttt{concept} dan klausa \texttt{requires}
+    \item \textit{Concepts} bawaan: \texttt{std::integral}, \texttt{std::floating\_point}, \texttt{std::invocable}
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Membangun \texttt{EventDispatcher} generik yang hanya menerima \textit{callable} yang sesuai kontrak (\texttt{std::invocable<T, const GridEvent\&>}).
+
+\textbf{Praktikum (Mode Aktif):}
+Mahasiswa mendefinisikan \texttt{concept Solvable} yang mensyaratkan tipe memiliki fungsi \texttt{.solve()} dan \texttt{.get\_result()}.
+\end{tcolorbox}
+
+% --- Minggu 11 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 11: C++20 \textit{Ranges} \& Pemrosesan Data Fungsional}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-4 \hfill \textbf{Taksonomi Bloom:} C3--C5 (Menerapkan, Mengevaluasi)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item \texttt{std::views::filter}, \texttt{std::views::transform}, \texttt{std::views::take}
+    \item Operator pipa (\texttt{|}) dan komposisi \textit{view}
+    \item Evaluasi \textit{lazy}: mengapa tidak ada alokasi memori tambahan
+    \item \textit{Lambda expressions}
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Membangun \textit{pipeline} fungsional yang memfilter pembacaan sensor PMU abnormal ($< 0.95$ p.u.) dan mentransformasi nilainya menjadi persentase deviasi.
+
+\textbf{Praktikum (Mode Aktif):}
+Diberikan \texttt{std::vector<double>} berisi 10.000 pembacaan tegangan. Mahasiswa menulis satu baris kode \textit{pipeline} untuk mengekstrak 10 tegangan terendah.
+\end{tcolorbox}
+
+% --- Minggu 12 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 12: Penanganan Kesalahan Modern (\texttt{std::expected})}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-4 \hfill \textbf{Taksonomi Bloom:} C3--C5 (Menerapkan, Mengevaluasi)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item Mengapa \texttt{throw}/\texttt{catch} (\textit{exceptions}) lambat di HPC
+    \item \texttt{std::optional<T>}: nilai yang mungkin tidak ada
+    \item \texttt{std::expected<T, E>} (C++23): mengembalikan hasil \textbf{atau} kesalahan
+    \item \texttt{std::unexpected}: membungkus objek kesalahan
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Merefaktor fungsi \texttt{hitung\_margin\_kapasitas()} dari gaya \textit{exception} ke \texttt{std::expected}.
+
+\textbf{Praktikum (Mode Aktif):}
+Diberikan tiga fungsi \textit{legacy} yang menggunakan \texttt{throw}. Mahasiswa merefaktor ketiganya ke \texttt{std::expected} dan menulis \textit{test case} Catch2 untuk memvalidasi jalur sukses dan jalur gagal.
+\end{tcolorbox}
+
+% --- Minggu 13 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 13: Konkurensi Modern I --- \texttt{std::jthread} \& Sinkronisasi}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-5 \hfill \textbf{Taksonomi Bloom:} C3--C5 (Menerapkan, Mengevaluasi)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item \texttt{std::jthread}: \textit{thread} yang bergabung otomatis (RAII \textit{thread})
+    \item Pembatalan kooperatif: \texttt{std::stop\_token} dan \texttt{std::stop\_source}
+    \item \texttt{std::mutex} dan pencegahan \textit{deadlock} dengan \texttt{std::scoped\_lock}
+    \item Anatomi \textit{race condition}
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Memparalelkan simulasi analisis kontingensi $N-1$ di mana setiap \textit{thread} menghitung satu skenario pelepasan saluran.
+
+\textbf{Praktikum (Mode Aktif):}
+Diberikan simulator beban kerja sekuensial. Mahasiswa memparalelkannya menggunakan \texttt{std::jthread} dan membuktikan bahwa hasilnya konsisten (\textit{thread-safe}).
+\end{tcolorbox}
+
+% --- Minggu 14 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 14: Konkurensi Modern II --- \textit{Atomics} \& Desain Berorientasi Data}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-5, CPMK-6 \hfill \textbf{Taksonomi Bloom:} C4--C6 (Menganalisis, Mengevaluasi, Mencipta)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item \texttt{std::atomic<T>}: keamanan \textit{thread} tanpa \textit{mutex} (\textit{lock-free})
+    \item \textit{Hardware Sympathy}: jalur \textit{cache} CPU (\textit{cache lines}) dan \textit{false sharing}
+    \item \textit{Array of Structs} (AoS) vs \textit{Struct of Arrays} (SoA)
+    \item \textit{Benchmarking}: mengukur kinerja kedua tata letak memori
+\end{itemize}
+
+\textbf{Studi Kasus Domain:}
+Mendesain ulang struktur data jaringan transmisi dari AoS ke SoA dan mengukur percepatan (\textit{speedup}) pada 10 juta cabang.
+
+\textbf{Praktikum (Mode Aktif):}
+Mahasiswa mengimplementasikan kedua versi (AoS dan SoA), menjalankan \textit{benchmark}, dan menganalisis hasil \textit{speedup} dalam laporan singkat.
+\end{tcolorbox}
+
+% --- Minggu 15 ---
+\begin{tcolorbox}[colback=white, colframe=uniblue, title={\textbf{Minggu 15: C++20 \textit{Modules} \& Proyek Kapstone}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+\textbf{CPMK:} CPMK-7 (Seluruh CPMK) \hfill \textbf{Taksonomi Bloom:} C6 (Mencipta)
+
+\textbf{Materi Pokok:}
+\begin{itemize}[nosep]
+    \item C++20 \textit{Modules}: \texttt{export module}, \texttt{import} (menggantikan \texttt{\#include})
+    \item Konfigurasi CMake + Ninja untuk \textit{module} (\texttt{FILE\_SET CXX\_MODULES})
+    \item Presentasi dan demonstrasi proyek kapstone
+\end{itemize}
+
+\textbf{Proyek Kapstone:}
+
+\begin{tcolorbox}[colback=lightblue, colframe=uniblue!70]
+\textbf{Mesin Penapisan Kontingensi $N-1$ Paralel}\\[0.2cm]
+Mahasiswa membangun sebuah \textit{engine} C++20 utuh yang mengintegrasikan:
+\begin{enumerate}[nosep]
+    \item Ingesti data saluran transmisi tanpa salinan (\texttt{string\_view}, \texttt{span})
+    \item \textit{Solver} aliran daya DC terbatas (\textit{constrained})
+    \item Penskalaan \textit{thread pool} menggunakan \texttt{std::jthread}
+    \item Pemfilteran hasil fungsional menggunakan \texttt{<ranges>}
+    \item Penanganan kesalahan menggunakan \texttt{std::expected}
+    \item Tata letak data SoA untuk kinerja \textit{cache} optimal
+\end{enumerate}
+\end{tcolorbox}
+
+\textbf{Presentasi:}
+Setiap mahasiswa/kelompok mempresentasikan arsitektur, hasil \textit{benchmark}, dan analisis kinerja mesinnya.
+\end{tcolorbox}
+
+% --- Minggu 16 ---
+\begin{tcolorbox}[colback=lightgray, colframe=gray, title={\textbf{Minggu 16: UJIAN AKHIR SEMESTER (UAS)}}, fonttitle=\bfseries]
+\textbf{Cakupan:} Minggu 9--15 (CPMK-3 s.d. CPMK-7) \\
+\textbf{Format:} 30\% Teori (esai analitis) + 70\% Praktik (proyek kapstone + \textit{live defense}) \\
+\textbf{Durasi:} 150 menit (termasuk presentasi kapstone)
+\end{tcolorbox}
+
+% ====================================================================
+% EVALUASI
+% ====================================================================
+\newpage
+\section*{Komponen Evaluasi}
+
+\begin{center}
+\begin{tabular}{@{}llc@{}}
+    \toprule
+    \textbf{No.} & \textbf{Komponen} & \textbf{Bobot (\%)} \\
+    \midrule
+    1 & Tugas Mingguan (\textit{coding challenges}) & 20 \\
+    2 & Praktikum \& Partisipasi Aktif & 10 \\
+    3 & UTS (Teori + Praktik) & 25 \\
+    4 & Proyek Kapstone ($N-1$ \textit{Engine}) & 20 \\
+    5 & UAS (Teori + Praktik + \textit{Defense}) & 25 \\
+    \midrule
+    & \textbf{Total} & \textbf{100} \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\section*{Skala Penilaian}
+
+\begin{center}
+\begin{tabular}{@{}ccl@{}}
+    \toprule
+    \textbf{Huruf} & \textbf{Rentang Nilai} & \textbf{Deskripsi Kompetensi} \\
+    \midrule
+    A  & 85--100 & Menguasai seluruh konsep; kapstone berjalan paralel dan teroptimasi \\
+    B+ & 75--84  & Menguasai sebagian besar konsep; kapstone berjalan dengan minor issue \\
+    B  & 65--74  & Memahami konsep inti; mampu menulis kode RAII dan concurrent \\
+    C+ & 55--64  & Memahami dasar; belum konsisten dalam penerapan modern idiom \\
+    C  & 45--54  & Pemahaman parsial; masih mencampurkan pola legacy dan modern \\
+    D  & 35--44  & Pemahaman terbatas \\
+    E  & $<$ 35  & Tidak memenuhi standar minimum \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+% ====================================================================
+% REFERENSI
+% ====================================================================
+\section*{Referensi Utama}
+
+\begin{enumerate}[label={[\arabic*]}, itemsep=0.3cm]
+    \item Stroustrup, B. (2024). \textit{A Tour of C++} (3rd ed.). Addison-Wesley.
+    \item Josuttis, N. M. (2022). \textit{C++20: The Complete Guide}. Leanpub.
+    \item Meyers, S. (2014). \textit{Effective Modern C++}. O'Reilly Media.
+    \item Williams, A. (2024). \textit{C++ Concurrency in Action} (2nd ed.). Manning Publications.
+    \item Iglberger, K. (2022). \textit{C++ Software Design}. O'Reilly Media.
+    \item ISO/IEC 14882:2020 --- \textit{Programming Language C++} (C++20 Standard).
+    \item ISO/IEC 14882:2024 --- \textit{Programming Language C++} (C++23 Standard).
+    \item \url{https://en.cppreference.com} --- Referensi daring standar C++.
+\end{enumerate}
+
+\section*{Referensi Domain (Sistem Tenaga Listrik)}
+
+\begin{enumerate}[label={[\arabic*]}, start=9, itemsep=0.3cm]
+    \item Glover, J. D., Overbye, T. J., \& Sarma, M. S. (2022). \textit{Power Systems Analysis and Design} (7th ed.). Cengage.
+    \item Milano, F. (2010). \textit{Power System Modelling and Scripting}. Springer.
+\end{enumerate}
+
+% ====================================================================
+% METODOLOGI
+% ====================================================================
+\section*{Metodologi Pembelajaran}
+
+\begin{tcolorbox}[colback=lightblue, colframe=uniblue, title={\textbf{Model Tutor \& Murid Aktif}}, fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=uniblue]
+Perkuliahan ini mengadopsi pendekatan \textbf{pembelajaran aktif} (\textit{active learning}) yang terinspirasi oleh metodologi \textit{Pair Programming} dan \textit{Reverse Classroom}:
+
+\begin{enumerate}[itemsep=0.3cm]
+    \item \textbf{Fase Konsep (30 menit):} Dosen menjelaskan teori dan idiom C++ modern dengan analogi domain ketenagalistrikan. Tidak ada \textit{live coding} oleh dosen.
+
+    \item \textbf{Fase Tantangan (60 menit):} Mahasiswa diberikan kode \textit{legacy} yang buruk atau kerangka kode (\textit{skeleton code}) dengan bagian kosong (\texttt{// TODO}). Mahasiswa menyelesaikan tantangan secara mandiri, menulis kode di komputer mereka masing-masing.
+
+    \item \textbf{Fase \textit{Review} (30 menit):} Dosen memilih beberapa solusi mahasiswa secara acak, menampilkannya di layar, dan memimpin diskusi kelas tentang kelebihan, kekurangan, dan potensi perbaikan dari setiap solusi.
+
+    \item \textbf{Sengaja Memasukkan \textit{Bug}:} Secara berkala, dosen memberikan kode yang mengandung \textit{bug} tersembunyi (\textit{memory leak}, \textit{race condition}, atau \textit{undefined behavior}). Mahasiswa berlomba menemukan dan memperbaikinya.
+\end{enumerate}
+
+\textbf{Prinsip Utama:} \textit{``Dosen tidak pernah menulis solusi lengkap. Mahasiswa yang menulis. Dosen yang me-review.''}
+\end{tcolorbox}
+
+\end{document}
