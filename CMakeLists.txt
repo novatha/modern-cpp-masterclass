@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.20)
+# C++20 Modules (FILE_SET CXX_MODULES) and CMakePresets v6 require CMake 3.28+
+cmake_minimum_required(VERSION 3.28)
 project(ModernCppLearning VERSION 1.0.0 LANGUAGES CXX)
 
 # Enforce C++20 standard
@@ -71,6 +72,7 @@ target_link_libraries(test_event_dispatcher PRIVATE Catch2::Catch2WithMain)
 # Phase 1/Log Parsing Tests
 add_executable(test_log_parser tests/test_log_parser.cpp src/log_parser.cpp)
 target_include_directories(test_log_parser PRIVATE src)
+target_compile_definitions(test_log_parser PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 target_link_libraries(test_log_parser PRIVATE Catch2::Catch2WithMain)
 
 # Phase 1 Module Tests (requires C++20 modules)

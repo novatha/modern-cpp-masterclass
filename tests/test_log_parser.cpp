@@ -20,7 +20,7 @@ TEST_CASE("parse_severity: unknown returns UNKNOWN", "[log_parser]") {
 }
 
 TEST_CASE("parse_file: parses sample data correctly", "[log_parser]") {
-    std::string path = std::filesystem::current_path().string() + "/../data/sample_grid_logs.txt";
+    std::string path = std::string(DATA_DIR) + "/sample_grid_logs.txt";
     auto logs = parse_file(path);
 
     REQUIRE(logs.size() == 6);

@@ -5,6 +5,7 @@
 #include <array>
 #include <tuple>
 #include <format>
+#include <algorithm> // std::min
 
 // 1. Compile-time constant evaluation (constexpr vs consteval)
 // consteval guarantees this MUST be evaluated at compile time
