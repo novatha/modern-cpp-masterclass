@@ -1,5 +1,6 @@
 #include <iostream>
 #include <format>
+#include <string_view>
 import grid_parser;
 
 int main() {

@@ -42,6 +42,7 @@ endif()
 add_executable(phase1_basics src/phase1_basics.cpp)
 # Mini-Project 1: Log Parsing (C++20 string_view & format)
 add_executable(mini_project_1 src/main.cpp src/log_parser.cpp)
+target_compile_definitions(mini_project_1 PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 # ==============================================================================
 # Phase 2: Memory Management & Automated Testing

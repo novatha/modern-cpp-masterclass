@@ -17,7 +17,7 @@ std::string_view severity_to_string(grid_logs::Severity s) {
 int main() {
     std::cout << "--- Power Grid Log Analyzer ---\n\n";
 
-    std::string_view log_path = "../data/sample_grid_logs.txt";
+    std::string log_path = std::string(DATA_DIR) + "/sample_grid_logs.txt";
     std::vector<grid_logs::LogEntry> logs = grid_logs::parse_file(log_path);
 
     int critical_count = 0;
