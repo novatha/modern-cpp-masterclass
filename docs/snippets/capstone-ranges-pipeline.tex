@@ -1,0 +1,11 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    auto critical_views = global_results 
+        | std::views::filter([](const ContingencyResult& r) { return !r.causes_islanding; })
+        | std::views::filter([](const ContingencyResult& r) { return r.max_overload_pct > 100.0; })
+        | std::views::take(3);
+
+    for (const auto& res : critical_views) {
+        std::cout << std::format(" -> Tripping {} causes cascaded OVERLOAD of {:.1f}%\n", 
+                                 res.tripped_branch_id, res.max_overload_pct);
+    }
+\end{minted}

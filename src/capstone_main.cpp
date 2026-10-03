@@ -56,6 +56,7 @@ std::vector<Branch> load_grid_data() {
 // PHASE 2 & 3: MEMORY VIEWS & CONSTRAINED MATH SOLVER
 // Using std::span ensures we never accidentally copy the massive grid array.
 // ============================================================================
+// SNIPPET: capstone-n-minus-1-solver
 template <PrecisionFloat T>
 ContingencyResult simulate_n_minus_1(std::span<const Branch> full_grid, const Branch& tripped_branch) {
     // Simulate complex math (e.g., building Y-bus, solving DC Power Flow, checking thermal limits)
@@ -75,6 +76,7 @@ ContingencyResult simulate_n_minus_1(std::span<const Branch> full_grid, const Br
     
     return {tripped_branch.id, overload, islanding};
 }
+// END SNIPPET
 
 // ============================================================================
 // PHASE 5: CONCURRENCY GLOBALS
@@ -115,6 +117,7 @@ int main() {
     std::cout << "[System] Spawning thread pool for N-1 analysis...\n";
     auto start_time = std::chrono::high_resolution_clock::now();
     
+    // SNIPPET: capstone-parallel-pool
     {
         std::vector<std::jthread> pool;
         
@@ -129,6 +132,7 @@ int main() {
         
         // jthreads automatically join here, safely waiting for simulation to finish.
     }
+    // END SNIPPET
     
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -145,6 +149,7 @@ int main() {
     });
     
     // Functional Pipeline: Filter out islanding, filter healthy lines, take top 3
+    // SNIPPET: capstone-ranges-pipeline
     auto critical_views = global_results 
         | std::views::filter([](const ContingencyResult& r) { return !r.causes_islanding; })
         | std::views::filter([](const ContingencyResult& r) { return r.max_overload_pct > 100.0; })
@@ -154,6 +159,7 @@ int main() {
         std::cout << std::format(" -> Tripping {} causes cascaded OVERLOAD of {:.1f}%\n", 
                                  res.tripped_branch_id, res.max_overload_pct);
     }
+    // END SNIPPET
     
     std::cout << "\n--- ISLANDING CONTINGENCIES (LOSS OF LOAD) ---\n";
     

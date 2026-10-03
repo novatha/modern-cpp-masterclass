@@ -1,0 +1,16 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    {
+        std::vector<std::jthread> pool;
+        
+        // Split work exactly in half for 2 threads using std::span
+        size_t half = grid.size() / 2;
+        std::span<const Branch> chunk1(grid.data(), half);
+        std::span<const Branch> chunk2(grid.data() + half, grid.size() - half);
+        std::span<const Branch> full_view(grid);
+        
+        pool.emplace_back(worker_thread, full_view, chunk1);
+        pool.emplace_back(worker_thread, full_view, chunk2);
+        
+        // jthreads automatically join here, safely waiting for simulation to finish.
+    }
+\end{minted}

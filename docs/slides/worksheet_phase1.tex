@@ -1,0 +1,360 @@
+% =============================================================================
+% Lembar Kerja Fase 1: Fondasi Modern C++
+% Universitas Bengkulu — Modern C++ Masterclass
+% =============================================================================
+\documentclass[12pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+% Colors
+\definecolor{UBgreen}{RGB}{0,102,51}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{keyword}{RGB}{0,0,180}
+\definecolor{comment}{RGB}{0,130,0}
+\definecolor{string}{RGB}{180,0,0}
+
+\lstset{
+  language=C++,
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{keyword}\bfseries,
+  commentstyle=\color{comment}\itshape,
+  stringstyle=\color{string},
+  frame=single,
+  framerule=0.5pt,
+  rulecolor=\color{UBgreen},
+  breaklines=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=5pt
+}
+
+% Header
+\newcommand{\worksheetheader}[2]{
+  \noindent
+  \begin{tabular}{@{}p{0.6\textwidth}p{0.4\textwidth}@{}}
+    \textbf{\large Lembar Kerja: #1} & \textbf{Mata Kuliah:} Modern C++ untuk Power Systems \\
+    \textbf{Nama:} \underline{\hspace{5cm}} & \textbf{NIM:} \underline{\hspace{3cm}} \\
+    \textbf{Kelas:} \underline{\hspace{2cm}} & \textbf{Tanggal:} \underline{\hspace{2.5cm}}
+  \end{tabular}
+  \vspace{0.5cm}
+  \hrule
+  \vspace{0.5cm}
+}
+
+\begin{document}
+
+\worksheetheader{Fase 1: consteval, string\_view, format, Structured Binding, Modules}
+
+% =============================================================================
+% BAGIAN A: KONSEP DASAR (C1 - Remember, C2 - Understand)
+% =============================================================================
+\section*{Bagian A: Konsep Dasar (C1--C2)}
+
+\begin{tcolorbox}[colback=UBgreen!5, colframe=UBgreen, title=\textbf{A1. consteval vs constexpr (C1: Remember)}]
+\textbf{Isilah tabel perbedaan berikut:}
+
+\begin{center}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Karakteristik} & \texttt{constexpr} & \texttt{consteval} \\
+\hline
+Bisa dievaluasi compile-time & Ya & Ya \\
+\hline
+\emph{Harus} dievaluasi compile-time & Tidak & \textbf{Ya} \\
+\hline
+Bisa dipanggil dengan argumen runtime & Ya & \textbf{Tidak} \\
+\hline
+Bisa digunakan di konteks non-constant & Ya & \textbf{Tidak} \\
+\hline
+Contoh use case & Fungsi utility umum & Validasi compile-time, lookup table \\
+\hline
+\end{tabular}
+\end{center}
+
+\textbf{Soal:} Mengapa \texttt{consteval} cocok untuk \texttt{fibonacci(10)} tapi tidak untuk \texttt{fibonacci(n)} di mana \texttt{n} input user?
+\end{tcolorbox}
+
+\vspace{0.5cm}
+
+\begin{tcolorbox}[colback=UBgreen!5, colframe=UBgreen, title=\textbf{A2. std::string\_view (C2: Understand)}]
+\textbf{Jelaskan dengan kalimat sendiri:}
+
+\begin{enumerate}[label=\alph*)]
+  \item Mengapa \texttt{std::string\_view} disebut \textit{zero-copy}?
+  
+  \vspace{2cm}
+  
+  \item Apa risiko \textit{dangling reference} saat menggunakan \texttt{string\_view}? Berikan contoh kode yang bermasalah.
+  
+  \vspace{3cm}
+  
+  \item Kapan sebaiknya gunakan \texttt{std::string} vs \texttt{std::string\_view}?
+  
+  \vspace{2cm}
+\end{enumerate}
+\end{tcolorbox}
+
+% =============================================================================
+% BAGIAN B: APLIKASI (C3 - Apply)
+% =============================================================================
+\section*{Bagian B: Aplikasi (C3 - Apply)}
+
+\begin{tcolorbox}[colback=UBgreen!5, colframe=UBgreen, title=\textbf{B1. Parsing Log Grid (C3: Apply)}]
+\textbf{Tulis fungsi \texttt{parse\_log\_line} yang menerima \texttt{std::string\_view} dan mengembalikan struct:}
+
+\begin{lstlisting}
+struct LogEntry {
+    std::string_view timestamp;  // "2026-10-01T08:07:45"
+    std::string_view severity;   // "CRITICAL"
+    std::string_view message;    // "Transformer_T1 overloaded (115%)"
+};
+
+LogEntry parse_log_line(std::string_view line);
+\end{lstlisting}
+
+\textbf{Format input:} \texttt{2026-10-01T08:07:45 [CRITICAL] Transformer_T1 overloaded (115\%)}
+
+\textbf{Petunjuk:} Gunakan \texttt{find()}, \texttt{substr()}, hindari allocation.
+
+\vspace{4cm}
+\textbf{Test cases:}
+\begin{itemize}
+  \item \texttt{"2026-10-01T08:00:00 [INFO] System started"}
+  \item \texttt{"2026-10-01T08:05:12 [WARN] Voltage drop detected"}
+  \item \texttt{"2026-10-01T08:07:45 [CRITICAL] Overload!"}
+\end{itemize}
+\end{tcolorbox}
+
+\vspace{0.5cm}
+
+\begin{tcolorbox}[colback=UBgreen!5, colframe=UBgreen, title=\textbf{B2. Structured Binding (C3: Apply)}]
+\textbf{Lengkapi kode berikut untuk unpack struct \texttt{Measurement}:}
+
+\begin{lstlisting}
+struct Measurement {
+    std::string sensor_name;
+    double voltage;   // kV
+    double current;   // A
+};
+
+int main() {
+    Measurement m{"SUTET_150kV", 150.0, 200.0};
+    
+    // TODO: Structured binding di sini
+    // auto [_____, _____, _____] = m;
+    
+    double apparent_power = _____ * _____; // VA
+    std::cout << "Power: " << apparent_power << " VA\n";
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\vspace{0.5cm}
+
+\begin{tcolorbox}[colback=UBgreen!5, colframe=UBgreen, title=\textbf{B3. std::format (C3: Apply)}]
+\textbf{Gunakan \texttt{std::format} untuk output berikut:}
+
+\begin{enumerate}[label=\alph*)]
+  \item Tegangan: \texttt{230.5 kV}, Arus: \texttt{12.8 A} $\rightarrow$ \texttt{"V=230.5kV, I=12.8A"}
+  \item Koordinat: \texttt{lat=-0.7893}, \texttt{lon=100.3542} $\rightarrow$ \texttt{"(-0.7893, 100.3542)"}
+  \item Status: \texttt{true} $\rightarrow$ \texttt{"ONLINE"}, \texttt{false} $\rightarrow$ \texttt{"OFFLINE"}
+\end{enumerate}
+
+\begin{lstlisting}
+// TODO: Lengkapi
+std::cout << std::format("_______", _______);
+\end{lstlisting}
+\end{tcolorbox}
+
+% =============================================================================
+% BAGIAN C: ANALISIS (C4 - Analyze)
+% =============================================================================
+\section*{Bagian C: Analisis (C4 - Analyze)}
+
+\begin{tcolorbox}[colback=UBgreen!5, colframe=UBgreen, title=\textbf{C1. Analisis Performa: string vs string\_view (C4: Analyze)}]
+\textbf{Bandingkan dua implementasi parsing log 1 juta baris:}
+
+\begin{lstlisting}
+// Versi 1: std::string
+std::string line;
+while (std::getline(file, line)) {
+    auto pos1 = line.find('[');
+    auto pos2 = line.find(']');
+    std::string severity = line.substr(pos1+1, pos2-pos1-1); // ALLOKASI!
+    process(severity);
+}
+
+// Versi 2: std::string_view
+std::string line;
+while (std::getline(file, line)) {
+    std::string_view sv = line;
+    auto pos1 = sv.find('[');
+    auto pos2 = sv.find(']');
+    std::string_view severity = sv.substr(pos1+1, pos2-pos1-1); // NO ALLOKASI
+    process(severity);
+}
+\end{lstlisting}
+
+\textbf{Soal:}
+\begin{enumerate}[label=\alph*)]
+  \item Estimasi alokasi memori Versi 1 untuk 1 juta baris (rata-rata severity 7 char).
+  
+  \vspace{2cm}
+  
+  \item Mengapa Versi 2 masih butuh \texttt{std::string line} di luar loop?
+  
+  \vspace{2cm}
+  
+  \item Apa yang terjadi jika \texttt{process()} menyimpan \texttt{string\_view} ke vektor global?
+  
+  \vspace{2cm}
+\end{enumerate}
+\end{tcolorbox}
+
+% =============================================================================
+% BAGIAN D: EVALUASI (C5 - Evaluate)
+% =============================================================================
+\section*{Bagian D: Evaluasi (C5 - Evaluate)}
+
+\begin{tcolorbox}[colback=UBgreen!5, colframe=UBgreen, title=\textbf{D1. Evaluasi Desain: consteval untuk Power Flow (C5: Evaluate)}]
+\textbf{Scenario:} Anda ingin menghitung impedansi saluran standar IEC 60909 pada compile-time untuk konfigurasi grid yang \textbf{fixed} (diketahui saat compile).
+
+\begin{itemize}
+  \item Argumen \textbf{UNTUK} menggunakan \texttt{consteval}:
+  
+  \vspace{2cm}
+  
+  \item Argumen \textbf{TOLAK} menggunakan \texttt{consteval}:
+  
+  \vspace{2cm}
+  
+  \item \textbf{Keputusan Anda:} \hspace{2cm} \texttt{consteval} / \texttt{constexpr} / \texttt{const} / \texttt{runtime}
+  \item \textbf{Alasan:}
+  
+  \vspace{2cm}
+\end{itemize}
+\end{tcolorbox}
+
+\vspace{0.5cm}
+
+\begin{tcolorbox}[colback=UBgreen!5, colframe=UBgreen, title=\textbf{D2. Evaluasi: C++20 Modules vs Header (C5: Evaluate)}]
+\textbf{Bandingkan untuk proyek tim 5 orang, 50 file source:}
+
+\begin{center}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Aspek} & \textbf{Header (.hpp)} & \textbf{Modules (.cppm)} \\
+\hline
+Kompilasi bersyarat & Lambat (include berulang) & Cepat (BMI cached) \\
+\hline
+Enkapsulasi & Lemah (semua \texttt{public}) & Kuat (\texttt{export} control) \\
+\hline
+ODR violations & Rentan & Terhindar \\
+\hline
+Tooling support & Universal & Clang/MSVC (GCC terbatas) \\
+\hline
+Migrasi existing code & Mudah & Butuh refactor \\
+\hline
+\end{tabular}
+\end{center}
+
+\textbf{Keputusan untuk proyek baru 2025:} \hspace{3cm} Modules / Header
+\end{tcolorbox}
+
+% =============================================================================
+% BAGIAN E: CREATIVE (C6 - Create)
+% =============================================================================
+\section*{Bagian E: Kreatif (C6 - Create)}
+
+\begin{tcolorbox}[colback=UBgold!10, colframe=UBgold, title=\textbf{E1. Project Mini: Compile-Time Impedance Table (C6: Create)}]
+\textbf{Buat program yang:}
+
+\begin{enumerate}
+  \item \texttt{consteval} generate \texttt{std::array<double, N>} impedansi saluran standar (misal: 10 tipe kabel).
+  \item \texttt{consteval} validasi: impedansi $> 0$, tidak NaN.
+  \item \texttt{main()} print table dengan \texttt{std::format} rapi.
+  \item Bonus: \texttt{consteval} hitung \texttt{ampacity} berdasarkan temperatur ambient.
+\end{enumerate}
+
+\textbf{Template kode:}
+
+\begin{lstlisting}
+#include <array>
+#include <format>
+#include <iostream>
+
+// TODO: Define CableSpec struct
+
+// TODO: consteval array<CableSpec, 10> generate_standard_cables()
+
+// TODO: consteval bool validate_cables(const auto& cables)
+
+int main() {
+    // TODO: Print table using std::format
+    // No | Name        | R (ohm/km) | X (ohm/km) | Ampacity (A)
+}
+\end{lstlisting}
+
+\vspace{1cm}
+\textbf{Kriteria penilaian:}
+\begin{itemize}
+  \item[\square] Kompilasi berhasil (consteval dievaluasi compile-time)
+  \item[\square] Validasi compile-time gagal jika data invalid
+  \item[\square] Output tabel rapi dengan \texttt{std::format}
+  \item[\square] Bonus: Ampacity calculation benar
+\end{itemize}
+\end{tcolorbox}
+
+\vspace{0.5cm}
+
+\begin{tcolorbox}[colback=UBgold!10, colframe=UBgold, title=\textbf{E2. Creative: Log Parser Module (C6: Create)}]
+\textbf{Buat C++20 Module \texttt{grid\_parser} yang:}
+
+\begin{enumerate}
+  \item \texttt{export enum class Severity \{ INFO, WARN, CRITICAL, UNKNOWN \};}
+  \item \texttt{export struct LogEntry \{ timestamp, severity, message \};}
+  \item \texttt{export LogEntry parse\_log\_line(std::string\_view);}
+  \item \texttt{export std::vector<LogEntry> parse\_file(std::string\_view path);}
+  \item Handle edge cases: empty line, malformed, missing severity.
+\end{enumerate}
+
+\textbf{Test dengan \texttt{data/sample\_grid\_logs.txt}:}
+
+\begin{lstlisting}
+2026-10-01T08:00:00 [INFO] Substation_A initialization complete.
+2026-10-01T08:05:12 [WARN] Bus_12 voltage dropping (0.94 pu).
+2026-10-01T08:07:45 [CRITICAL] Transformer_T1 overloaded (115%).
+...
+\end{lstlisting}
+\end{tcolorbox}
+
+% =============================================================================
+% REFLEKSI
+% =============================================================================
+\section*{Refleksi Diri}
+
+\begin{tcolorbox}[colback=blue!5, colframe=blue, title=\textbf{Refleksi Fase 1}]
+\begin{enumerate}[label=\arabic*.]
+  \item Konsep mana yang paling sulit dipahami? \underline{\hspace{8cm}}
+  
+  \item Konsep mana yang paling berguna untuk proyek power systems Anda? \underline{\hspace{8cm}}
+  
+  \item Apa yang akan Anda terapkan ke proyek nyata minggu ini? \underline{\hspace{8cm}}
+  
+  \item Skor pemahaman (1-10): \underline{\hspace{1cm}}
+\end{enumerate}
+\end{tcolorbox}
+
+\vspace{1cm}
+\begin{center}
+\textbf{\large --- Selamat Mengerjakan ---}
+\end{center}
+
+\end{document}

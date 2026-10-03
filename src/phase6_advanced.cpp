@@ -28,6 +28,7 @@ std::string error_to_string(SystemError err) {
 }
 
 // Returns a double on success, or a SystemError on failure
+// SNIPPET: phase6-expected-solver
 std::expected<double, SystemError> solve_power_flow(double load_mw) {
     if (load_mw < 0) {
         return std::unexpected(SystemError::InvalidTelemetry);
@@ -37,6 +38,7 @@ std::expected<double, SystemError> solve_power_flow(double load_mw) {
     }
     return load_mw * 0.95; // Mock successful calculation
 }
+// END SNIPPET
 
 // ============================================================================
 // TOPIC 2: Hardware Sympathy (CPU Cache & Data-Oriented Design)
@@ -56,6 +58,7 @@ struct BranchOOP {
 
 // 2. Struct of Arrays (SoA) - The High-Performance Way
 // Data is packed tightly by type.
+// SNIPPET: phase6-soa-layout
 struct GridSOA {
     std::vector<int> id;
     std::vector<double> r;
@@ -69,6 +72,7 @@ struct GridSOA {
         std::fill(limit.begin(), limit.end(), 500.0);
     }
 };
+// END SNIPPET
 
 // Prevent dead-store elimination: force compiler to keep the computation
 inline void consume_result(double& val) {
@@ -117,6 +121,7 @@ int main() {
     double aos_sum = 0.0;
     double soa_sum = 0.0;
 
+    // SNIPPET: phase6-strided-benchmark
     // Benchmark AoS (OOP) - strided access
     auto start_aos = std::chrono::steady_clock::now();
     for (size_t idx : strided_indices) {
@@ -132,6 +137,7 @@ int main() {
     }
     auto end_soa = std::chrono::steady_clock::now();
     auto soa_us = std::chrono::duration_cast<std::chrono::microseconds>(end_soa - start_soa).count();
+    // END SNIPPET
 
     // Anti-DSE: consume results
     consume_result(aos_sum);

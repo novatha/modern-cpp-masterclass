@@ -26,6 +26,11 @@ test_expected
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.xdv
+_minted/
 *.pdf
 
 # IDE / Editor

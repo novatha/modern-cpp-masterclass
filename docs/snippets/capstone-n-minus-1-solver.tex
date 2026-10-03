@@ -1,0 +1,21 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+template <PrecisionFloat T>
+ContingencyResult simulate_n_minus_1(std::span<const Branch> full_grid, const Branch& tripped_branch) {
+    // Simulate complex math (e.g., building Y-bus, solving DC Power Flow, checking thermal limits)
+    std::this_thread::sleep_for(std::chrono::milliseconds(150)); 
+    
+    T overload = 0.0;
+    bool islanding = false;
+    
+    // Dummy logic to generate interesting results based on branch properties
+    if (tripped_branch.capacity_mw > 400.0) {
+        overload = 135.5; // Heavy backbone lines cause massive cascading overloads
+    } else if (tripped_branch.id == "L5" || tripped_branch.id == "L8") {
+        islanding = true; // Dropping radial lines isolates buses
+    } else {
+        overload = 85.0; // Safe (under 100% capacity)
+    }
+    
+    return {tripped_branch.id, overload, islanding};
+}
+\end{minted}

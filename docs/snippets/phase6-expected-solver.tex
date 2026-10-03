@@ -1,0 +1,11 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+std::expected<double, SystemError> solve_power_flow(double load_mw) {
+    if (load_mw < 0) {
+        return std::unexpected(SystemError::InvalidTelemetry);
+    }
+    if (load_mw > 10000) {
+        return std::unexpected(SystemError::ConvergenceFailed);
+    }
+    return load_mw * 0.95; // Mock successful calculation
+}
+\end{minted}

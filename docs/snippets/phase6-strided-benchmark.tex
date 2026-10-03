@@ -1,0 +1,17 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    // Benchmark AoS (OOP) - strided access
+    auto start_aos = std::chrono::steady_clock::now();
+    for (size_t idx : strided_indices) {
+        aos_sum += aos_grid[idx].x;
+    }
+    auto end_aos = std::chrono::steady_clock::now();
+    auto aos_us = std::chrono::duration_cast<std::chrono::microseconds>(end_aos - start_aos).count();
+
+    // Benchmark SoA (Data-Oriented) - strided access
+    auto start_soa = std::chrono::steady_clock::now();
+    for (size_t idx : strided_indices) {
+        soa_sum += soa_grid.x[idx];
+    }
+    auto end_soa = std::chrono::steady_clock::now();
+    auto soa_us = std::chrono::duration_cast<std::chrono::microseconds>(end_soa - start_soa).count();
+\end{minted}

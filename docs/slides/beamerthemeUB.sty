@@ -1,0 +1,129 @@
+% =============================================================================
+% Beamer Theme for Universitas Bengkulu
+% =============================================================================
+\ProvidesPackage{beamerthemeUB}
+
+\mode<presentation>
+
+% Colors
+\definecolor{UBgreen}{RGB}{0,102,51}
+\definecolor{UBdarkgreen}{RGB}{0,76,38}
+\definecolor{UBgold}{RGB}{204,153,0}
+\definecolor{UBlightgray}{RGB}{245,245,245}
+\definecolor{UBdarkgray}{RGB}{64,64,64}
+
+% Color theme
+\setbeamercolor{normal text}{fg=UBdarkgray,bg=white}
+\setbeamercolor{alerted text}{fg=UBgreen}
+\setbeamercolor{example text}{fg=UBgold}
+
+\setbeamercolor{structure}{fg=UBgreen}
+\setbeamercolor{titlelike}{parent=structure}
+
+\setbeamercolor{palette primary}{fg=white,bg=UBgreen}
+\setbeamercolor{palette secondary}{fg=white,bg=UBdarkgreen}
+\setbeamercolor{palette tertiary}{fg=UBgreen,bg=UBlightgray}
+\setbeamercolor{palette quaternary}{fg=UBdarkgreen,bg=UBgold}
+
+\setbeamercolor{frametitle}{fg=white,bg=UBgreen}
+\setbeamercolor{framesubtitle}{fg=UBgold,bg=UBlightgray}
+\setbeamercolor{block title}{fg=white,bg=UBgreen}
+\setbeamercolor{block body}{fg=UBdarkgray,bg=UBlightgray}
+\setbeamercolor{block title alerted}{fg=white,bg=red!70!black}
+\setbeamercolor{block body alerted}{fg=black,bg=red!10}
+\setbeamercolor{block title example}{fg=white,bg=UBgold}
+\setbeamercolor{block body example}{fg=black,bg=UBgold!10}
+
+% Fonts
+\usefonttheme{professionalfonts}
+\setbeamerfont{title}{size=\Large,series=\bfseries}
+\setbeamerfont{subtitle}{size=\normalsize}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamerfont{framesubtitle}{size=\normalsize}
+\setbeamerfont{block title}{size=\normalsize,series=\bfseries}
+
+% Title page
+\defbeamertemplate*{title page}{UB}[1][]{
+  \vspace*{2cm}
+  \begin{centering}
+    {\usebeamerfont{title}\inserttitle\par}
+    \ifx\insertsubtitle\@empty\else
+      \vskip0.5em{\usebeamerfont{subtitle}\insertsubtitle\par}
+    \fi
+    \vskip1.5em
+    {\usebeamerfont{author}\insertauthor\par}
+    \vskip0.5em
+    {\usebeamerfont{institute}\insertinstitute\par}
+    \vskip1em
+    {\usebeamerfont{date}\insertdate\par}
+    \vskip2em
+    \begin{tikzpicture}[remember picture,overlay]
+      \node[anchor=south west, xshift=1cm, yshift=1cm] at (current page.south west) {
+        \includegraphics[height=1.2cm]{assets/ub_logo.pdf}
+      };
+      \node[anchor=south east, xshift=-1cm, yshift=1cm] at (current page.south east) {
+        \includegraphics[height=1.2cm]{assets/ub_logo.pdf}
+      };
+    \end{tikzpicture}
+  \end{centering}
+}
+
+% Frame title
+\defbeamertemplate*{frametitle}{UB}[1][]{
+  \leavevmode
+  \begin{beamercolorbox}[wd=\paperwidth,ht=1.2cm,dp=0.3cm]{frametitle}
+    \hspace{0.8cm}\insertframetitle
+    \ifx\insertframesubtitle\@empty\else
+      \hspace{0.5cm}\textcolor{UBgold}{\insertframesubtitle}
+    \fi
+  \end{beamercolorbox}
+  \vspace{-0.2cm}
+  \hspace{0.8cm}\rule{\dimexpr\paperwidth-1.6cm\relax}{1.5pt}
+}
+
+% Footline
+\defbeamertemplate*{footline}{UB}[1][]{
+  \leavevmode
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.7cm,dp=0.2cm]{palette quaternary}
+    \hspace{0.8cm}\usebeamerfont{author}\insertshortauthor
+    \hfill
+    \usebeamerfont{title}\insertshorttitle
+    \hfill
+    \usebeamerfont{page number}\insertframenumber\,/\,\inserttotalframenumber
+    \hspace{0.8cm}
+  \end{beamercolorbox}
+}
+
+% Navigation symbols off
+\setbeamertemplate{navigation symbols}{}
+
+% Itemize symbols
+\setbeamertemplate{itemize item}{\color{UBgreen}$\bullet$}
+\setbeamertemplate{itemize subitem}{\color{UBgold}$\circ$}
+\setbeamertemplate{itemize subsubitem}{\color{UBdarkgray}$\diamond$}
+
+% Enumerate
+\setbeamertemplate{enumerate items}[default]
+\setbeamercolor{enumerate item}{fg=UBgreen}
+\setbeamercolor{enumerate subitem}{fg=UBgold}
+
+% Blocks
+\setbeamertemplate{blocks}[rounded][shadow=true]
+
+% Code listings
+\usepackage{minted}
+\usemintedstyle{monokai}
+\setminted{
+  linenos=true,
+  breaklines=true,
+  frame=lines,
+  framesep=2mm,
+  fontsize=\footnotesize,
+  baselinestretch=1.1
+}
+
+% TikZ for decorations
+\usepackage{tikz}
+\usetikzlibrary{positioning,shadows,arrows.meta}
+
+\mode<all>

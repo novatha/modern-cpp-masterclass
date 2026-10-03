@@ -1,0 +1,421 @@
+% =============================================================================
+% Problem Set Lengkap: Modern C++ untuk Power Systems
+% Bloom's Taxonomy C1–C6 per Fase
+% Universitas Bengkulu
+% =============================================================================
+\documentclass[12pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{multicol}
+
+\definecolor{UBgreen}{RGB}{0,102,51}
+\definecolor{UBgold}{RGB}{204,153,0}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{keyword}{RGB}{0,0,180}
+\definecolor{comment}{RGB}{0,130,0}
+\definecolor{string}{RGB}{180,0,0}
+
+\lstset{
+  language=C++,
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{keyword}\bfseries,
+  commentstyle=\color{comment}\itshape,
+  stringstyle=\color{string},
+  frame=single,
+  framerule=0.5pt,
+  rulecolor=\color{UBgreen},
+  breaklines=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=5pt
+}
+
+\newcommand{\problem}[3]{
+  \begin{tcolorbox}[colback=UBgreen!3, colframe=UBgreen, title=\textbf{#1 (#2: #3)}]
+  #4
+  \end{tcolorbox}
+  \vspace{0.3cm}
+}
+
+\begin{document}
+
+\title{\Large Problem Set: Modern C++ Masterclass — Power Systems Edition}
+\author{Universitas Bengkulu — Fakultas Teknik}
+\date{\today}
+\maketitle
+
+\tableofcontents
+\newpage
+
+% =============================================================================
+% FASE 1
+% =============================================================================
+\section{Fase 1: Fondasi Modern C++}
+
+\problem{C1: Remember}{C1}{Remember}{
+Sebutkan 3 perbedaan utama antara \texttt{constexpr} dan \texttt{consteval}.
+}
+
+\problem{C2: Understand}{C2}{Understand}{
+Jelaskan mengapa \texttt{std::string\_view} disebut \textit{non-owning} dan \textit{zero-copy}. Berikan contoh situasi di mana \texttt{string\_view} menjadi \textit{dangling reference}.
+}
+
+\problem{C3: Apply}{C3}{Apply}{
+Tulis fungsi \texttt{parse\_measurement(std::string\_view)} yang mem-parsing string format \texttt{"V=230.5,I=12.8,P=2950"} dan mengembalikan \texttt{struct Measurement\{double v,i,p;\}}.
+}
+
+\problem{C4: Analyze}{C4}{Analyze}{
+Bandingkan performa memori dan kecepatan \texttt{std::format} vs \texttt{std::ostringstream} vs \texttt{snprintf} untuk formatting 1 juta log entry. Jelaskan mengapa \texttt{std::format} type-safe.
+}
+
+\problem{C5: Evaluate}{C5}{Evaluate}{
+Kapan sebaiknya menggunakan \texttt{consteval} dibanding \texttt{constexpr} untuk perhitungan parameter jaringan (impedansi, ampacity, koordinat)? Berikan 2 argumen pro dan 2 kontra.
+}
+
+\problem{C6: Create}{C6}{Create}{
+Buat C++20 Module \texttt{grid\_types} yang mengekspor:
+\begin{itemize}
+  \item \texttt{enum class BusType \{ SLACK, PV, PQ \};}
+  \item \texttt{struct Bus \{ int id; BusType type; double v\_pu; double angle; \};}
+  \item \texttt{consteval std::array<Bus, 14> ieee14\_buses();} — data IEEE 14-bus test system
+  \item \texttt{std::ostream\& operator<<(std::ostream\&, const Bus\&);}
+\end{itemize}
+Test dengan \texttt{import grid\_types;} di file terpisah.
+}
+
+% =============================================================================
+% FASE 2
+% =============================================================================
+\section{Fase 2: Memory Management \& Testing}
+
+\problem{C1: Remember}{C1}{Remember}{
+Apa itu Rule of Five? Kapan Rule of Zero cukup? Jelaskan peran \texttt{std::unique\_ptr} dalam Rule of Zero.
+}
+
+\problem{C2: Understand}{C2}{Understand}{
+Jelaskan mengapa \texttt{MatrixBuffer} mendelete copy constructor tapi mengimplementasikan move constructor. Apa yang terjadi jika move constructor tidak \texttt{noexcept}?
+}
+
+\problem{C3: Apply}{C3}{Apply}{
+Implementasikan \texttt{MatrixBuffer::operator=(MatrixBuffer\&\& other) noexcept} menggunakan \texttt{std::exchange} untuk \texttt{rows\_}, \texttt{cols\_}, dan \texttt{data\_}.
+}
+
+\problem{C4: Analyze}{C4}{Analyze}{
+Analisis: Mengapa \texttt{get\_row()} mengembalikan \texttt{std::span<T>} bukan \texttt{T*} atau \texttt{std::vector<T>}? Bandingkan safety, performance, dan ergonomics.
+}
+
+\problem{C5: Evaluate}{C5}{Evaluate}{
+Evaluasi trade-off \texttt{std::unique\_ptr<T[]>} vs \texttt{std::vector<T>} untuk buffer matrix besar (10000x10000). Pertimbangkan: alignment, bounds check, resize, cache locality.
+}
+
+\problem{C6: Create}{C6}{Create}{
+Extend \texttt{MatrixBuffer} dengan:
+\begin{itemize}
+  \item \texttt{T\& operator()(size\_t row, size\_t col)} dengan bounds check
+  \item \texttt{const T\& operator()(size\_t row, size\_t col) const}
+  \item \texttt{std::span<T> get\_col(size\_t col)} (strided access)
+  \item \texttt{MatrixBuffer transpose() const} yang return baru
+  \item Static factory \texttt{static MatrixBuffer identity(size\_t n)}
+\end{itemize}
+Tulis unit test Catch2 untuk semua method baru.
+}
+
+% =============================================================================
+% FASE 3
+% =============================================================================
+\section{Fase 3: Generic Programming \& Concepts}
+
+\problem{C1: Remember}{C1}{Remember}{
+Apa perbedaan \texttt{concept} vs \texttt{template<typename T>} klasik? Sebutkan 3 keuntungan \texttt{concept}.
+}
+
+\problem{C2: Understand}{C2}{Understand}{
+Jelaskan arti \texttt{requires std::invocable<Func, const EventType\&>} pada \texttt{EventBus::subscribe}. Apa yang terjadi jika lambda signature tidak match?
+}
+
+\problem{C3: Apply}{C3}{Apply}{
+Buat concept \texttt{Serializable} yang require method \texttt{std::string to\_json() const} dan \texttt{void from\_json(std::string\_view)}. Gunakan di template function \texttt{save\_to\_file(T\& obj, std::string\_view path)}.
+}
+
+\problem{C4: Analyze}{C4}{Analyze}{
+Analisis type erasure di \texttt{EventBus}: 
+\begin{enumerate}
+  \item Mengapa butuh \texttt{HandlerBase} virtual?
+  \item Apa overhead runtime vs template biasa?
+  \item Kapan type erasure berguna vs template?
+\end{enumerate}
+}
+
+\problem{C5: Evaluate}{C5}{Evaluate}{
+Evaluasi: \texttt{if constexpr} vs template specialization untuk compile-time branching. Kapan masing-masing lebih baik? Berikan contoh domain power systems.
+}
+
+\problem{C6: Create}{C6}{Create}{
+Extend \texttt{EventBus} dengan:
+\begin{itemize}
+  \item \texttt{unsubscribe(EventType, callback\_id)} — return bool
+  \item \texttt{priority} parameter di \texttt{subscribe} (int, lower = higher priority)
+  \item \texttt{publish\_async(EventType\&\&)} — return \texttt{std::future<void>}
+  \item Thread-safe dengan \texttt{std::shared\_mutex}
+\end{itemize}
+}
+
+% =============================================================================
+% FASE 4
+% =============================================================================
+\section{Fase 4: Ranges \& Functional Pipelines}
+
+\problem{C1: Remember}{C1}{Remember}{
+Apa perbedaan \texttt{std::views::filter} vs \texttt{std::ranges::filter\_view}? Apa itu \textit{lazy evaluation} pada ranges?
+}
+
+\problem{C2: Understand}{C2}{Understand}{
+Jelaskan alur data pada pipeline: \texttt{readings | filter | filter | transform | take(2)}. Mengapa \texttt{transform} hanya dijalankan 2x bukan 8x?
+}
+
+\problem{C3: Apply}{C3}{Apply}{
+Diberikan \texttt{vector<Branch> branches}, tulis pipeline \texttt{ranges} untuk:
+\begin{enumerate}
+  \item Filter: \texttt{capacity\_mw > 400}
+  \item Transform: hitung \texttt{loading\% = flow / capacity * 100}
+  \item Filter: \texttt{loading\% > 100}
+  \item Sort descending by \texttt{loading\%}
+  \item Take top 5
+  \item Output: \texttt{vector<string>} formatted alerts
+\end{enumerate}
+}
+
+\problem{C4: Analyze}{C4}{Analyze}{
+Analisis memori: Pipeline ranges vs loop tradisional dengan \texttt{vector} intermediate. Hitung alokasi untuk 1M elems, 3 filter, 1 transform, take(10).
+}
+
+\problem{C5: Evaluate}{C5}{Evaluate}{
+Evaluasi: Kapan \texttt{std::optional} lebih baik dari \texttt{std::expected}? Kapan sebaliknya? Berikan contoh use case power systems untuk masing-masing.
+}
+
+\problem{C6: Create}{C6}{Create}{
+Buat custom view \texttt{views::chunk\_by\_substation} yang mengelompokkan \texttt{SensorReading} by \texttt{substation\_id}. Gunakan \texttt{std::ranges::view\_interface} dan \texttt{std::ranges::chunk\_by\_view} (C++23) atau implement manual.
+}
+
+% =============================================================================
+% FASE 5
+% =============================================================================
+\section{Fase 5: Concurrency}
+
+\problem{C1: Remember}{C1}{Remember}{
+Apa perbedaan \texttt{std::thread} vs \texttt{std::jthread}? Mengapa \texttt{jthread} lebih aman?
+}
+
+\problem{C2: Understand}{C2}{Understand}{
+Jelaskan \textit{cooperative cancellation} dengan \texttt{std::stop\_token}. Mengapa ini lebih baik dari \texttt{thread.detach()} atau \texttt{terminate()}?
+}
+
+\problem{C3: Apply}{C3}{Apply}{
+Implementasikan thread-safe \texttt{ConcurrentQueue<T>} dengan:
+\begin{itemize}
+  \item \texttt{void push(T\&\&)} — blocking jika full (optional capacity)
+  \item \texttt{bool try\_pop(T\&)} — non-blocking
+  \item \texttt{void wait\_pop(T\&)} — blocking hingga ada data
+  \item Gunakan \texttt{mutex} + \texttt{condition\_variable}
+\end{itemize}
+}
+
+\problem{C4: Analyze}{C4}{Analyze}{
+Analisis \texttt{memory\_order}: 
+\begin{enumerate}
+  \item Kapan \texttt{memory\_order\_relaxed} aman untuk counter?
+  \item Kapan butuh \texttt{memory\_order\_acquire}/\texttt{release}?
+  \item Kapan butuh \texttt{memory\_order\_seq\_cst}?
+\end{enumerate}
+Berikan contoh skenario power systems untuk masing-masing.
+}
+
+\problem{C5: Evaluate}{C5}{Evaluate}{
+Evaluasi deadlock prevention: \texttt{std::scoped\_lock} vs \texttt{std::lock\_guard} vs manual \texttt{lock()}/\texttt{unlock()}. Kapan \texttt{scoped\_lock} wajib dipakai?
+}
+
+\problem{C6: Create}{C6}{Create}{
+Desain \texttt{ThreadPool} class dengan:
+\begin{itemize}
+  \item Constructor: \texttt{ThreadPool(size\_t num\_threads)}
+  \item \texttt{template<F,Args> auto submit(F\&\& f, Args\&\&... args) -> std::future<decltype(f(args...))>}
+  \item \texttt{void shutdown()} — graceful, wait all tasks
+  \item Work-stealing queue per thread (optional)
+  \item Metrics: \texttt{get\_queue\_size()}, \texttt{get\_active\_threads()}
+\end{itemize}
+Test dengan N-1 contingency simulation (100 tasks, 4 threads).
+}
+
+% =============================================================================
+% FASE 6
+% =============================================================================
+\section{Fase 6: Advanced \& Hardware Sympathy}
+
+\problem{C1: Remember}{C1}{Remember}{
+Apa keuntungan \texttt{std::expected<T,E>} dibanding exception handling tradisional? Sebutkan 3 alasan.
+}
+
+\problem{C2: Understand}{C2}{Understand}{
+Jelaskan operasi monadik \texttt{expected}: \texttt{and\_then}, \texttt{transform}, \texttt{or\_else}, \texttt{transform\_error}. Berikan contoh chaining untuk validasi power flow input.
+}
+
+\problem{C3: Apply}{C3}{Apply}{
+Refactor fungsi \texttt{solve\_power\_flow} untuk menggunakan monadic chaining:
+\begin{enumerate}
+  \item Validasi \texttt{load\_mw > 0} (return \texttt{InvalidTelemetry})
+  \item Validasi \texttt{load\_mw <= max\_capacity} (return \texttt{Overload})
+  \item Hitung \texttt{flow = load * 0.95}
+  \item Validasi \texttt{flow < thermal\_limit} (return \texttt{ThermalViolation})
+  \item Return \texttt{flow}
+\end{itemize}
+Gunakan \texttt{and\_then} dan \texttt{transform}.
+}
+
+\problem{C4: Analyze}{C4}{Analyze}{
+Analisis cache performance: 
+\begin{enumerate}
+  \item Hitung L1 cache lines needed untuk \texttt{BranchOOP[10M]} stride-64 access (sizeof=32, line=64 bytes)
+  \item Hitung untuk \texttt{GridSOA.x[10M]} stride-64 access
+  \item Mengapa SoA 21x faster pada benchmark?
+\end{enumerate}
+}
+
+\problem{C5: Evaluate}{C5}{Evaluate}{
+Evaluasi: Kapan SoA TIDAK lebih cepat dari AoS? Berikan 3 skenario (Hint: single-pass streaming, small data, random access pattern). Kapan AoS lebih natural dari segi OOP design?
+}
+
+\problem{C6: Create}{C6}{Create}{
+Buat \texttt{GridSOA} yang SIMD-ready:
+\begin{itemize}
+  \item \texttt{alignas(64)} pada setiap \texttt{vector} (AVX-512 = 64 bytes)
+  \item \texttt{void add\_branch(int id, double r, double x, double limit)}
+  \item \texttt{double sum\_reactance\_simd()} menggunakan \texttt{std::experimental::simd} (atau intrinsic)
+  \item Benchmark vs scalar loop
+\end{itemize}
+}
+
+% =============================================================================
+% CAPSTONE
+% =============================================================================
+\section{Capstone: N-1 Contingency Engine}
+
+\problem{C1: Remember}{C1}{Remember}{
+Jelaskan alur N-1 contingency screening dalam 5 langkah. Apa output utama?
+}
+
+\problem{C2: Understand}{C2}{Understand}{
+Mengapa \texttt{std::span<const Branch>} dipakai untuk \texttt{full\_grid} dan \texttt{work\_chunk} di \texttt{worker\_thread}? Apa risiko jika pakai \texttt{vector<Branch>} by value?
+}
+
+\problem{C3: Apply}{C3}{Apply}{
+Modifikasi \texttt{worker\_thread} untuk:
+\begin{enumerate}
+  \item Catch exception di dalam loop, log error, continue next branch
+  \item Return \texttt{std::expected<ContingencyResult, std::string>}
+  \item Main thread collect \texttt{vector<expected<...>>}
+\end{enumerate}
+}
+
+\problem{C4: Analyze}{C4}{Analyze}{
+Analisis race condition potensial pada \texttt{global\_results} tanpa mutex. Hitung probability collision untuk 8 threads, 1M pushes each, tanpa synchronisasi.
+}
+
+\problem{C5: Evaluate}{C5}{Evaluate}{
+Evaluasi: Kapan thread pool size $>$ CPU cores bermanfaat untuk N-1 contingency? Kapan malah merugikan? Pertimbangkan: I/O bound vs CPU bound, hyperthreading, memory bandwidth.
+}
+
+\problem{C6: Create}{C6}{Create}{
+Extend Capstone Engine dengan:
+\begin{enumerate}
+  \item N-2 contingency: generate kombinasi \texttt{nC2} pairs, early pruning via \texttt{ranges::filter}
+  \item Parallel DC Power Flow solver (multi-threaded matrix solve)
+  \item Output JSON report: \texttt{contingency\_id, overload\_pct, islanding, violated\_branches[]}
+  \item CLI: \texttt{./capstone --grid=ieee14 --n=2 --output=report.json}
+  \item Unit test: compare N-1 results dengan reference MATLAB/PSAT
+\end{itemize}
+}
+
+% =============================================================================
+% ANSWER KEY (Outline)
+% =============================================================================
+\newpage
+\section*{Kunci Jawaban (Outline)}
+
+\subsection*{Fase 1}
+\begin{enumerate}
+  \item \textbf{C1:} consteval wajib compile-time, constexpr opsional; consteval tidak bisa argumen runtime; consteval tidak bisa non-constant context.
+  \item \textbf{C2:} string\_view hanya pointer+size, tidak own memory; dangling jika view ke temporary string.
+  \item \textbf{C3:} Gunakan find/substr, parse double dengan from_chars.
+  \item \textbf{C4:} format type-safe (compile-time check format string), ostringstream runtime, snprintf unsafe.
+  \item \textbf{C5:} Pro: catch error early, optimasi compiler; Kontra: compile-time longer, less flexible.
+  \item \textbf{C6:} Module dengan export, consteval array, operator<< overload.
+\end{enumerate}
+
+\subsection*{Fase 2}
+\begin{enumerate}
+  \item \textbf{C1:} Rule of Five: dtor, copy ctor, copy assign, move ctor, move assign. Rule of Zero: gunakan RAII types (unique_ptr, vector) sehingga compiler-generated cukup.
+  \item \textbf{C2:} Delete copy mencegah accidental deep copy mahal; move transfer ownership. noexcept diperlukan untuk STL container optimization.
+  \item \textbf{C3:} rows\_ = exchange(other.rows\_, 0); cols\_ = exchange(other.cols\_, 0); data\_ = move(other.data\_);
+  \item \textbf{C4:} span: bounds-safe, size-aware, non-owning, STL-compatible. Raw pointer: unsafe, no size. Vector: owning, copy overhead.
+  \item \textbf{C5:} unique_ptr: fixed size, manual alignment control, no bounds check overhead. Vector: dynamic, bounds check, possible reallocation.
+  \item \textbf{C6:} Implementasi lengkap dengan test Catch2.
+\end{enumerate}
+
+\subsection*{Fase 3}
+\begin{enumerate}
+  \item \textbf{C1:} Concept: named constraints, better error msg, subsumption, reusable. Template: implicit constraints, poor errors.
+  \item \textbf{C2:} Invocable constraint: Func harus callable dengan const EventType&. Mismatch = compile error di subscribe, bukan publish.
+  \item \textbf{C3:} concept Serializable = requires { to_json(); from_json(); }; template<Serializable T> save(T&, path).
+  \item \textbf{C4:} HandlerBase virtual = type erasure. Overhead: virtual call + heap allocation. Useful: heterogeneous container, plugin system.
+  \item \textbf{C5:} if constexpr: simple branch, same template. Specialization: different implementation, more verbose.
+  \item \textbf{C6:} Implementasi lengkap dengan priority queue, future, shared_mutex.
+\end{enumerate}
+
+\subsection*{Fase 4}
+\begin{enumerate}
+  \item \textbf{C1:} views::filter = adaptor, filter_view = type. Lazy: tidak compute sampai iterasi.
+  \item \textbf{C2:} take(2) short-circuit pipeline; transform hanya untuk elemen yang lolos filter & di-take.
+  \item \textbf{C3:} branches | filter(cap>400) | transform(loading%) | filter(>100) | sort(desc) | take(5) | transform(format).
+  \item \textbf{C4:} Pipeline: 0 alokasi intermediate. Loop tradisional: 3 vector intermediate = 3M elems allocation.
+  \item \textbf{C5:} Optional: simple nullable, no error info. Expected: error info, monadic chaining. Optional untuk "not found", Expected untuk "operation failed".
+  \item \textbf{C6:} Custom view_interface dengan chunk_by logic.
+\end{enumerate}
+
+\subsection*{Fase 5}
+\begin{enumerate}
+  \item \textbf{C1:} jthread auto-join di dtor, stop_token built-in. thread: manual join, no cancellation.
+  \item \textbf{C2:} Cooperative: thread cek stop_token berkala, cleanup sendiri. Detach/terminate: unsafe, resource leak.
+  \item \textbf{C3:} mutex + condition_variable, wait predicate, notify_one/notify_all.
+  \item \textbf{C4:} Relaxed: counter independen. Acquire/release: synchronization point. Seq_cst: total order, default safe.
+  \item \textbf{C5:} scoped_lock wajib untuk >1 mutex (deadlock prevention via deadlock-avoiding algorithm).
+  \item \textbf{C6:} ThreadPool dengan work queue, future, shutdown graceful, metrics.
+\end{enumerate}
+
+\subsection*{Fase 6}
+\begin{enumerate}
+  \item \textbf{C1:} No exception overhead, error di type system, forces handling, composable (monadic).
+  \item \textbf{C2:} and_then: chain expected-returning. transform: map value. or_else: fallback. transform_error: map error.
+  \item \textbf{C3:} Chain and_then untuk validasi, transform untuk kalkulasi.
+  \item \textbf{C4:} AoS stride-64: 64/32=2 elems per cache line, hanya pakai 1 (x). SoA: contiguous x, 8 elems per line.
+  \item \textbf{C5:} SoA tidak lebih cepat: single-pass streaming (prefetch hide latency), data kecil (fit L1), random access bukan stride.
+  \item \textbf{C6:} alignas(64), simd loop dengan std::experimental::simd atau _mm512 intrinsics.
+\end{enumerate}
+
+\subsection*{Capstone}
+\begin{enumerate}
+  \item \textbf{C1:} 1) Trip branch, 2) Build Y-bus, 3) Solve DC PF, 4) Check thermal/islanding, 5) Rank. Output: ranked contingencies.
+  \item \textbf{C2:} Span: non-owning view, zero-copy, bounds-safe. Vector by value: copy mahal, ownership unclear.
+  \item \textbf{C3:} Try-catch di loop, return expected, main collect vector<expected>.
+  \item \textbf{C4:} Data race probability tinggi; tanpa sync, lost updates, UB. Perlu mutex atau concurrent queue.
+  \item \textbf{C5:} I/O bound: >cores bermanfaat. CPU bound: >cores overhead context switch. Hyperthreading: 2x logical cores.
+  \item \textbf{C6:} N-2 combinatorial generation, parallel matrix solve, JSON CLI, test vs reference.
+\end{enumerate}
+
+\end{document}

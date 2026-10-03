@@ -1,0 +1,777 @@
+% =============================================================================
+% Modern C++ Masterclass — Power Systems Edition
+% Beamer Presentation for Universitas Bengkulu
+% Compile with: latexmk -pdf -shell-escape modern_cpp_slides.tex
+% =============================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+% Theme
+\usepackage{beamerthemeUB}
+
+% Packages
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{multicol}
+\usepackage{textcomp}
+
+% Snippet commands - direct input (no index file to avoid preamble issues)
+% Usage: \input{../snippets/phase1-consteval-fib}
+
+% Custom commands
+\newcommand{\cpp}{\texttt{C++}}
+\newcommand{\cpptwenty}{\texttt{C++20}}
+\newcommand{\cpptwentythree}{\texttt{C++23}}
+\newcommand{\consteval}{\texttt{consteval}}
+\newcommand{\constexpr}{\texttt{constexpr}}
+\newcommand{\stringview}{\texttt{std::string\_view}}
+\newcommand{\stdspan}{\texttt{std::span}}
+\newcommand{\optional}{\texttt{std::optional}}
+\newcommand{\expected}{\texttt{std::expected}}
+\newcommand{\jthread}{\texttt{std::jthread}}
+\newcommand{\atomic}{\texttt{std::atomic}}
+\newcommand{\mutex}{\texttt{std::mutex}}
+\newcommand{\scopedlock}{\texttt{std::scoped\_lock}}
+\newcommand{\ranges}{\texttt{std::ranges}}
+\newcommand{\views}{\texttt{std::views}}
+\newcommand{\format}{\texttt{std::format}}
+\newcommand{\concepts}{\texttt{concepts}}
+\newcommand{\AoS}{\texttt{AoS}}
+\newcommand{\SoA}{\texttt{SoA}}
+\newcommand{\RAII}{\texttt{RAII}}
+\newcommand{\modules}{\texttt{modules}}
+\newcommand{\coroutines}{\texttt{coroutines}}
+\newcommand{\stoptoken}{\texttt{stop\_token}}
+
+% Title info
+\title[Modern C++ Masterclass]{Modern C++ Masterclass: \cpptwenty/\cpptwentythree for Power Systems}
+\subtitle{N-1 Contingency Analysis with Modern C++}
+\author[Novalio Daratha]{Novalio Daratha}
+\institute[UNIB]{Fakultas Teknik, Universitas Bengkulu}
+\date[\today]{\today}
+
+\begin{document}
+
+% =============================================================================
+% TITLE PAGE
+% =============================================================================
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% =============================================================================
+% TABLE OF CONTENTS
+% =============================================================================
+\begin{frame}{Daftar Isi}
+  \tableofcontents
+\end{frame}
+
+% =============================================================================
+% SECTION 1: PENDAHULUAN
+% =============================================================================
+\section{Pendahuluan}
+
+\begin{frame}{Mengapa Modern C++ untuk Power Systems?}
+  \begin{block}{Tantangan Domain Kelistrikan}
+    \begin{itemize}
+      \item \textbf{Data besar}: Ribuan bus, cabang, pengukuran PMU real-time
+      \item \textbf{Performa kritis}: N-1 contingency screening butuh $< 1$ detik
+      \item \textbf{Keandalan}: Kecil error numerik $\rightarrow$ blackout
+      \item \textbf{Kompleksitas}: Model jaringan, proteksi, optimalisasi daya
+    \end{itemize}
+  \end{block}
+  
+  \begin{block}{Solusi Modern C++}
+    \begin{itemize}
+      \item \cpptwenty/\cpptwentythree: \consteval, \ranges, \concepts, \coroutines, \modules
+      \item \textbf{Zero-cost abstractions}: Tidak ada overhead runtime
+      \item \textbf{Memory safety}: \RAII, \stdspan, \optional, \expected
+      \item \textbf{Concurrency}: \jthread, \atomic, \stoptoken
+      \item \textbf{Hardware sympathy}: Cache-friendly \SoA, SIMD-ready
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Struktur Kursus (7 Fase + Capstone)}
+  \begin{center}
+    \begin{tabular}{cll}
+      \toprule
+      \textbf{Fase} & \textbf{Topik} & \textbf{Proyek} \\
+      \midrule
+      1 & \consteval, \stringview, \format, Structured Binding, \modules & Log Parser \\
+      2 & \RAII, Move Semantics, \stdspan, Testing (Catch2) & MatrixBuffer \\
+      3 & \concepts, Type Erasure, \texttt{if constexpr} & Event Dispatcher \\
+      4 & \ranges, \views, Pipelines, \optional & PMU Data Pipeline \\
+      5 & \jthread, \stoptoken, \atomic, \scopedlock & Parallel Worker Pool \\
+      6 & \expected, \SoA vs \AoS, Benchmark & Hardware Sympathy \\
+      Capstone & N-1 Parallel Contingency Engine & \textbf{Final Project} \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+  
+  \vspace{0.5cm}
+  \begin{alertblock}{Metode: Active Learning}
+    Setiap fase: Konsep $\rightarrow$ Demo $\rightarrow$ Latihan (C1--C6) $\rightarrow$ Refleksi
+  \end{alertblock}
+\end{frame}
+
+% =============================================================================
+% SECTION 2: PHASE 1
+% =============================================================================
+\section{Fase 1: Fondasi Modern C++}
+
+\begin{frame}{Fase 1: \consteval, \stringview, \format, Structured Binding}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    \begin{block}{Kunci Pembelajaran}
+      \begin{itemize}
+        \item \consteval: Jaminan compile-time evaluation
+        \item \stringview: Non-owning string slice (zero-copy)
+        \item \format: Type-safe formatting (seperti Python f-string)
+        \item Structured binding: Unpack struct/tuple clean
+        \item \modules: Kompilasi cepat, enkapsulasi header
+      \end{itemize}
+    \end{block}
+    
+    \column{0.45\textwidth}
+    \begin{exampleblock}{Contoh Domain}
+      \begin{itemize}
+        \item Parse log grid: \texttt{2026-10-01T08:07:45 [CRITICAL] ...}
+        \item Koordinat substation: \texttt{lat, lon}
+        \item Pembacaan tegangan: \texttt{voltage\_pu}
+      \end{itemize}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Consteval: Fibonacci Compile-Time}
+  \input{../snippets/phase1-consteval-fib}
+\end{frame}
+
+\begin{frame}[fragile]{String View: Zero-Copy Parsing}
+  \input{../snippets/phase1-string-view}
+  \vspace{0.3cm}
+  \input{../snippets/phase1-string-view-usage}
+\end{frame}
+
+\begin{frame}[fragile]{Structured Binding: Unpack Struct}
+  \input{../snippets/phase1-structured-binding}
+\end{frame}
+
+\begin{frame}[fragile]{Range-for dengan Init Statement}
+  \input{../snippets/phase1-range-for-init}
+\end{frame}
+
+\begin{frame}{Fase 1: C++20 Modules}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+    \begin{block}{grid\_parser.cppm}
+      \begin{itemize}
+        \item \texttt{export module grid\_parser;}
+        \item \texttt{export enum class Severity}
+        \item \texttt{export struct LogEntry}
+        \item \texttt{export LogEntry parse\_log\_line(...)}
+      \end{itemize}
+    \end{block}
+    \column{0.5\textwidth}
+    \begin{block}{phase1\_modules.cpp}
+      \begin{itemize}
+        \item \texttt{import grid\_parser;}
+        \item Tidak perlu \texttt{\#include}
+        \item Kompilasi terpisah, cepat
+        \item ODR-safe
+      \end{itemize}
+    \end{block}
+  \end{columns}
+  
+  \vspace{0.5cm}
+  \begin{alertblock}{Catatan: Butuh Clang $\ge$ 17 + CMake $\ge$ 3.28}
+  \end{alertblock}
+\end{frame}
+
+% =============================================================================
+% SECTION 3: PHASE 2
+% =============================================================================
+\section{Fase 2: Memory Management \& Testing}
+
+\begin{frame}{Fase 2: RAII, Move Semantics, \stdspan, Testing}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    \begin{block}{Kunci Pembelajaran}
+      \begin{itemize}
+        \item \RAII: Resource Acquisition Is Initialization
+        \item \texttt{unique\_ptr}: Exclusive ownership
+        \item Move semantics: Transfer ownership tanpa copy
+        \item \stdspan: Non-owning view, bounds-safe
+        \item Catch2: Modern testing framework
+      \end{itemize}
+    \end{block}
+    \column{0.45\textwidth}
+    \begin{exampleblock}{MatrixBuffer}
+      \begin{itemize}
+        \item 2D matrix buffer bounds-checked
+        \item \texttt{get\_row()} $\rightarrow$ \stdspan
+        \item Non-copyable, movable
+        \item Rule of Five + Rule of Zero
+      \end{itemize}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{RAII dengan unique\_ptr}
+  \input{../snippets/phase2-raii-unique-ptr}
+\end{frame}
+
+\begin{frame}[fragile]{Move Semantics: Transfer Ownership}
+  \input{../snippets/phase2-move-semantics}
+\end{frame}
+
+\begin{frame}[fragile]{\stdspan: Bounds-Safe Row Access}
+  \input{../snippets/phase2-span-row-access}
+\end{frame}
+
+\begin{frame}[fragile]{Testing dengan Catch2}
+  \begin{block}{Test Coverage MatrixBuffer}
+    \begin{itemize}
+      \item RAII \& Initialization
+      \item Move Semantics (construct + assign)
+      \item \stdspan prevents buffer decay
+    \end{itemize}
+  \end{block}
+  
+  \begin{exampleblock}{Menjalankan Test}
+    \begin{minted}{bash}
+cmake --preset=release
+ninja -C build
+ctest --test-dir build --output-on-failure
+    \end{minted}
+  \end{exampleblock}
+  
+  \vspace{0.3cm}
+  \begin{alertblock}{42 Test Total (Semua Fase)}
+    \texttt{test\_matrix}, \texttt{test\_event\_dispatcher}, \texttt{test\_log\_parser}, 
+    \texttt{test\_grid\_parser}, \texttt{test\_concurrency}, \texttt{test\_phase6}
+  \end{alertblock}
+\end{frame}
+
+% =============================================================================
+% SECTION 4: PHASE 3
+% =============================================================================
+\section{Fase 3: Generic Programming \& Concepts}
+
+\begin{frame}{Fase 3: Concepts, Type Erasure, if constexpr}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    \begin{block}{Kunci Pembelajaran}
+      \begin{itemize}
+        \item \concepts: Compile-time contracts
+        \item \texttt{requires} clause: Constrain template
+        \item Type Erasure: Heterogeneous storage
+        \item \texttt{if constexpr}: Compile-time branching
+        \item \texttt{std::invocable}: Callable constraint
+      \end{itemize}
+    \end{block}
+    \column{0.45\textwidth}
+    \begin{exampleblock}{EventDispatcher}
+      \begin{itemize}
+        \item \texttt{EventBus} generic
+        \item \texttt{LoggableEvent} concept
+        \item Auto-logging via \texttt{if constexpr}
+        \item Type-safe subscribe/publish
+      \end{itemize}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{LoggableEvent Concept}
+  \input{../snippets/phase3-loggable-event}
+\end{frame}
+
+\begin{frame}[fragile]{Subscribe \& Publish Pattern}
+  \input{../snippets/phase3-subscribe-publish}
+\end{frame}
+
+\begin{frame}[fragile]{Contoh Output EventDispatcher}
+  \begin{minted}{text}
+=== Phase 3: Generic Event Dispatcher (C++20 Concepts) ===
+
+--- Publishing VoltageDropEvent ---
+  -> [Controller A] Detected Substation_Alpha voltage drop to 0.92 pu
+
+--- Publishing LineTripEvent ---
+[SYSTEM LOG] Auto-logged: CRITICAL: Line_L42 has tripped. N-1 constraint violated.
+  -> [Controller B] Dispatching repair crew to Line_L42
+  \end{minted}
+  
+  \vspace{0.3cm}
+  \begin{itemize}
+    \item \texttt{VoltageDropEvent} tanpa \texttt{message()} $\rightarrow$ tidak auto-log
+    \item \texttt{LineTripEvent} dengan \texttt{message()} $\rightarrow$ auto-log aktif
+    \item Compile-time decision via \texttt{if constexpr}
+  \end{itemize}
+\end{frame}
+
+% =============================================================================
+% SECTION 5: PHASE 4
+% =============================================================================
+\section{Fase 4: Ranges \& Functional Pipelines}
+
+\begin{frame}{Fase 4: Ranges, Views, Pipelines, Optional}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    \begin{block}{Kunci Pembelajaran}
+      \begin{itemize}
+        \item \ranges + \views: Lazy, composable pipelines
+        \item \texttt{filter}, \texttt{transform}, \texttt{take}
+        \item Zero intermediate allocation
+        \item \optional: Explicit nullable return
+        \item \texttt{if (auto x = f(); x.has\_value())}
+      \end{itemize}
+    \end{block}
+    \column{0.45\textwidth}
+    \begin{exampleblock}{PMU Data Pipeline}
+      \begin{itemize}
+        \item Filter invalid readings
+        \item Filter voltage $< 0.95$ pu
+        \item Transform ke string alert
+        \item Take first 2 critical drops
+      \end{itemize}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Ranges Pipeline: Lazy Evaluation}
+  \input{../snippets/phase4-ranges-pipeline}
+\end{frame}
+
+\begin{frame}[fragile]{Optional: Modern Error Handling}
+  \input{../snippets/phase4-optional-find}
+\end{frame}
+
+\begin{frame}[fragile]{Contoh Output Pipeline}
+  \begin{minted}{text}
+--- 1. C++20 Lazy Ranges Pipeline ---
+  -> Time 400ms: CRITICAL VOLTAGE 0.92 pu
+  -> Time 600ms: CRITICAL VOLTAGE 0.88 pu
+
+--- 2. Modern Error Handling (std::optional) ---
+  -> Extreme drop (<0.90) detected at 600ms
+  \end{minted}
+  
+  \vspace{0.3cm}
+  \begin{itemize}
+    \item Pipeline \textbf{lazy}: Hanya memproses 2 elemen (take(2))
+    \item \texttt{transform} hanya dijalankan 2x, bukan 8x
+    \item \texttt{optional} memaksa caller handle kasus "not found"
+  \end{itemize}
+\end{frame}
+
+% =============================================================================
+% SECTION 6: PHASE 5
+% =============================================================================
+\section{Fase 5: Concurrency}
+
+\begin{frame}{Fase 5: jthread, stop\_token, atomic, scoped\_lock}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    \begin{block}{Kunci Pembelajaran}
+      \begin{itemize}
+        \item \jthread: Auto-join pada destructor
+        \item \texttt{stop\_token}: Kooperatif cancellation
+        \item \atomic: Lock-free counter
+        \item \scopedlock: RAII mutex, deadlock-safe
+        \item \texttt{memory\_order\_relaxed}: Untuk counter
+      \end{itemize}
+    \end{block}
+    \column{0.45\textwidth}
+    \begin{exampleblock}{Parallel Worker Pool}
+      \begin{itemize}
+        \item 4 worker nodes
+        \item Simulasi N-1 contingency calc
+        \item Graceful shutdown via \texttt{request\_stop()}
+        \item Thread-safe logging + counter
+      \end{itemize}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Mutex \& Scoped Lock}
+  \input{../snippets/phase5-mutex-scoped-lock}
+\end{frame}
+
+\begin{frame}[fragile]{Atomic Counter (Lock-Free)}
+  \input{../snippets/phase5-atomic-counter}
+\end{frame}
+
+\begin{frame}[fragile]{jthread dengan Stop Token}
+  \input{../snippets/phase5-jthread-stop-token}
+\end{frame}
+
+\begin{frame}[fragile]{jthread RAII: Auto-Join}
+  \input{../snippets/phase5-jthread-raii}
+\end{frame}
+
+\begin{frame}[fragile]{Contoh Output Concurrency}
+  \begin{minted}{text}
+=== Phase 5: Modern Concurrency (C++20 std::jthread) ===
+
+Node 1 online.
+Node 2 online.
+Node 3 online.
+Node 4 online.
+[Main] All nodes spawned. Letting them run for ~800ms...
+  -> Node 3 completed 5 calculations...
+  -> Node 1 completed 5 calculations...
+  -> Node 4 completed 5 calculations...
+  -> Node 2 completed 5 calculations...
+
+[Main] Requesting all nodes to stop...
+[Main] End of scope reached. jthreads will automatically join!
+Node 1 gracefully shutting down.
+...
+
+[Main] Final Report: 32 total contingencies analyzed safely.
+  \end{minted}
+\end{frame}
+
+% =============================================================================
+% SECTION 7: PHASE 6
+% =============================================================================
+\section{Fase 6: Advanced \& Hardware Sympathy}
+
+\begin{frame}{Fase 6: std::expected, SoA vs AoS, Benchmark}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    \begin{block}{Kunci Pembelajaran}
+      \begin{itemize}
+        \item \expected: Error handling tanpa exception
+        \item Monadic ops: \texttt{and\_then}, \texttt{transform}, \texttt{or\_else}
+        \item \AoS vs \SoA: Memory layout \& cache
+        \item Benchmark valid: \texttt{steady\_clock}, \texttt{\textmu s}, anti-DSE
+      \end{itemize}
+    \end{block}
+    \column{0.45\textwidth}
+    \begin{exampleblock}{Power Flow Solver}
+      \begin{itemize}
+        \item \texttt{solve\_power\_flow(load\_mw)} $\rightarrow$ \expected
+        \item Error: InvalidTelemetry, ConvergenceFailed, MatrixSingular
+        \item Enum error type: Trivial, no heap allocation
+      \end{itemize}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{std::expected: Error Handling Tanpa Exception}
+  \begin{minted}{cpp}
+enum class SystemError {
+    InvalidTelemetry, ConvergenceFailed, MatrixSingular
+};
+
+std::expected<double, SystemError> solve_power_flow(double load_mw) {
+    if (load_mw < 0) return std::unexpected(SystemError::InvalidTelemetry);
+    if (load_mw > 10000) return std::unexpected(SystemError::ConvergenceFailed);
+    return load_mw * 0.95; // Mock calculation
+}
+
+// Usage
+auto result = solve_power_flow(500.0);
+if (result) {
+    use(result.value()); // 475.0
+} else {
+    handle(result.error());
+}
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{SoA vs AoS: Memory Layout}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+    \begin{block}{Array of Structs (AoS)}
+      \begin{minted}{cpp}
+struct BranchOOP {
+    int id;
+    double r, x, limit;
+};
+std::vector<BranchOOP> aos_grid;
+// Memory: [id][r][x][limit][id][r][x][limit]...
+// Stride: 32 bytes, hanya pakai x (8 bytes)
+// 75% bandwidth wasted!
+      \end{minted}
+    \end{block}
+    \column{0.5\textwidth}
+    \begin{block}{Struct of Arrays (SoA)}
+      \begin{minted}{cpp}
+struct GridSOA {
+    std::vector<int> id;
+    std::vector<double> r, x, limit;
+};
+GridSOA soa_grid;
+// Memory: [x][x][x][x]... contiguous!
+// Stride: 8 bytes, 100% bandwidth used
+// Cache line: 64 bytes = 8 doubles
+      \end{minted}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Benchmark: Strided Access (10M Branches)}
+  \begin{block}{Hasil pada Clang 23, Apple M-series}
+    \begin{center}
+      \begin{tabular}{lcc}
+        \toprule
+        \textbf{Layout} & \textbf{Time} & \textbf{Speedup} \\
+        \midrule
+        AoS (OOP) & 32,376 $\mu$s & 1.0x (baseline) \\
+        SoA (Data-Oriented) & 1,492 $\mu$s & \textbf{21.7x faster} \\
+        \bottomrule
+      \end{tabular}
+    \end{center}
+  \end{block}
+  
+  \begin{alertblock}{Kunci Benchmark Valid}
+    \begin{itemize}
+      \item \texttt{std::chrono::steady\_clock} + microseconds
+      \item Strided access (stride 64) $\rightarrow$ cache miss pada AoS
+      \item Anti-DSE: \texttt{asm volatile} consume result
+      \item Kondisional claim: hanya claim faster jika speedup $> 1.05$
+    \end{itemize}
+  \end{alertblock}
+\end{frame}
+
+% =============================================================================
+% SECTION 8: CAPSTONE
+% =============================================================================
+\section{Capstone: N-1 Contingency Engine}
+
+\begin{frame}{Capstone: Parallel N-1 Contingency Screening}
+  \begin{block}{Problem Statement}
+    Diberikan grid $N$ cabang, simulasi \textbf{N-1 contingency} untuk setiap cabang:
+    \begin{enumerate}
+      \item Trip cabang $i$
+      \item Hitung DC Power Flow (Y-bus, line flows)
+      \item Cek thermal limit (overload $> 100\%$)
+      \item Deteksi islanding (loss of load)
+      \item Rank berdasarkan severity
+    \end{enumerate}
+  \end{block}
+  
+  \begin{block}{Solusi Modern C++}
+    \begin{itemize}
+      \item \jthread pool (2 threads, split via \stdspan)
+      \item \atomic counter untuk progress tracking
+      \item \ranges pipeline untuk filter/sort hasil
+      \item \format untuk output terstruktur
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Capstone Output}
+  \begin{minted}{text}
+========================================================
+  MODERN C++ CAPSTONE: Parallel N-1 Contingency Engine  
+========================================================
+
+[System] Loaded 8 branches into memory.
+[System] Spawning thread pool for N-1 analysis...
+[System] Analysis complete. 8 contingencies processed in 618 ms.
+
+--- TOP CRITICAL CONTINGENCIES (THERMAL OVERLOAD) ---
+ -> Tripping L1 causes cascaded OVERLOAD of 135.5%
+ -> Tripping L7 causes cascaded OVERLOAD of 135.5%
+ -> Tripping L4 causes cascaded OVERLOAD of 135.5%
+
+--- ISLANDING CONTINGENCIES (LOSS OF LOAD) ---
+ -> Tripping L5 isolates buses, causing grid islanding.
+ -> Tripping L8 isolates buses, causing grid islanding.
+  \end{minted}
+\end{frame}
+
+% =============================================================================
+% SECTION 9: KESIMPULAN
+% =============================================================================
+\section{Kesimpulan}
+
+\begin{frame}{Ringkasan: Modern C++ untuk Power Systems}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+    \begin{block}{Fitur Modern C++ Terpakai}
+      \begin{itemize}
+        \item \consteval, \concepts, \modules (C++20)
+        \item \ranges, \views, \optional, \format (C++20)
+        \item \jthread, \stoptoken, \atomic, \scopedlock (C++20)
+        \item \expected, \expected monadic ops (C++23)
+      \end{itemize}
+    \end{block}
+    \column{0.5\textwidth}
+    \begin{block}{Best Practices}
+      \begin{itemize}
+        \item RAII everywhere (unique\_ptr, span, jthread)
+        \item Value semantics + move, avoid copy
+        \item Compile-time checks (concepts, consteval)
+        \item Hardware-aware (SoA, cache-friendly)
+        \item Test-driven (Catch2, 42 tests pass)
+      \end{itemize}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Referensi \& Lanjut}
+  \begin{block}{Standar \& Referensi}
+    \begin{itemize}
+      \item ISO C++20/23 Standard
+      \item \textit{C++ Templates} — Vandevoorde/Josuttis
+      \item \textit{Effective Modern C++} — Scott Meyers
+      \item CppReference.com
+    \end{itemize}
+  \end{block}
+  
+  \begin{block}{Topik Lanjut}
+    \begin{itemize}
+      \item C++26: Reflection, Contracts, std::execution
+      \item SYCL/oneAPI untuk GPU acceleration
+      \item Coroutines untuk async power flow
+      \item Formal verification (CBMC, KLEE)
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Terima Kasih}
+  \begin{center}
+    \vspace{2cm}
+    {\LARGE \textbf{Terima Kasih}}
+    
+    \vspace{1cm}
+    {\large Pertanyaan \& Diskusi}
+    
+    \vspace{2cm}
+    \includegraphics[height=1.5cm]{assets/ub_logo.pdf}
+    
+    \vspace{0.5cm}
+    \texttt{novalio.daratha@unib.ac.id}
+  \end{center}
+\end{frame}
+
+% =============================================================================
+% APPENDIX: PROBLEM SET (C1-C6)
+% =============================================================================
+\appendix
+\section{Lampiran: Problem Set Bloom C1--C6}
+
+\begin{frame}[allowframebreaks]{Problem Set: Fase 1 (C1--C6)}
+  \frametitle{Problem Set: Fase 1 — Fondasi Modern C++}
+  
+  \textbf{C1 (Remember):} Sebutkan 3 perbedaan \texttt{constexpr} vs \texttt{consteval}.
+  
+  \textbf{C2 (Understand):} Jelaskan mengapa \texttt{std::string\_view} tidak allocation saat substring.
+  
+  \textbf{C3 (Apply):} Tulis fungsi \texttt{parse\_voltage(std::string\_view)} yang ekstrak nilai double dari \texttt{"V=230.5"}.
+  
+  \textbf{C4 (Analyze):} Bandingkan \texttt{std::format} vs \texttt{std::ostringstream} untuk performa \& safety.
+  
+  \textbf{C5 (Evaluate):} Kapan sebaiknya pakai \texttt{consteval} vs \texttt{constexpr} untuk perhitungan jaringan?
+  
+  \textbf{C6 (Create):} Buat \texttt{consteval} function untuk generate \texttt{std::array} impedansi saluran standar IEC 60909.
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Problem Set: Fase 2 (C1--C6)}
+  \frametitle{Problem Set: Fase 2 — Memory Management}
+  
+  \textbf{C1:} Apa itu Rule of Five? Kapan Rule of Zero cukup?
+  
+  \textbf{C2:} Jelaskan ownership transfer dalam move constructor \texttt{MatrixBuffer}.
+  
+  \textbf{C3:} Implementasikan \texttt{MatrixBuffer::operator=(MatrixBuffer\&\&)} dengan \texttt{std::exchange}.
+  
+  \textbf{C4:} Analisis: Mengapa \texttt{get\_row()} return \texttt{std::span} bukan \texttt{T*}?
+  
+  \textbf{C5:} Evaluasi: Kapan \texttt{unique\_ptr\textlessT[]\textgreater} lebih baik dari \texttt{vector\textlessT\textgreater} untuk matrix?
+  
+  \textbf{C6:} Desain \texttt{MatrixBuffer} yang support \texttt{operator()(row,col)} dengan bounds check.
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Problem Set: Fase 3 (C1--C6)}
+  \frametitle{Problem Set: Fase 3 — Concepts \& Generic Programming}
+  
+  \textbf{C1:} Definisi \texttt{concept} vs \texttt{template} klasik.
+  
+  \textbf{C2:} Jelaskan \texttt{requires std::invocable\textlessFunc, const EventType\&\textgreater}.
+  
+  \textbf{C3:} Buat concept \texttt{Serializable} yang require \texttt{to\_json()} method.
+  
+  \textbf{C4:} Analisis type erasure di \texttt{EventBus::HandlerBase}. Apa trade-off?
+  
+  \textbf{C5:} Evaluasi: Kapan pakai \texttt{if constexpr} vs template specialization?
+  
+  \textbf{C6:} Extend \texttt{EventBus} dengan \texttt{unsubscribe} dan priority queue handler.
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Problem Set: Fase 4 (C1--C6)}
+  \frametitle{Problem Set: Fase 4 — Ranges \& Pipelines}
+  
+  \textbf{C1:} Apa perbedaan \texttt{std::views::filter} vs \texttt{std::ranges::filter}?
+  
+  \textbf{C2:} Jelaskan lazy evaluation pada pipeline \texttt{filter | transform | take}.
+  
+  \textbf{C3:} Tulis pipeline cari top-3 overload tertinggi dari \texttt{vector\textlessBranch\textgreater}.
+  
+  \textbf{C4:} Analisis: Mengapa \texttt{take(2)} setelah \texttt{transform} hemat performa?
+  
+  \textbf{C5:} Evaluasi: Kapan \texttt{std::optional} lebih baik dari \texttt{std::expected}?
+  
+  \textbf{C6:} Buat \texttt{views::chunk_by} custom untuk grup readings per substation.
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Problem Set: Fase 5 (C1--C6)}
+  \frametitle{Problem Set: Fase 5 — Concurrency}
+  
+  \textbf{C1:} Perbedaan \texttt{std::thread} vs \texttt{std::jthread}.
+  
+  \textbf{C2:} Jelaskan \texttt{stop\_token} cooperative cancellation pattern.
+  
+  \textbf{C3:} Implementasi thread-safe queue dengan \texttt{mutex} + \texttt{condition\_variable}.
+  
+  \textbf{C4:} Analisis: Kapan \texttt{memory\_order\_relaxed} aman vs butuh \texttt{seq\_cst}?
+  
+  \textbf{C5:} Evaluasi: \texttt{scoped\_lock} vs \texttt{lock\_guard} untuk deadlock prevention.
+  
+  \textbf{C6:} Desain work-stealing thread pool untuk N-1 contingency parallellization.
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Problem Set: Fase 6 (C1--C6)}
+  \frametitle{Problem Set: Fase 6 — Advanced \& Hardware Sympathy}
+  
+  \textbf{C1:} Keuntungan \texttt{std::expected} vs exception untuk error handling.
+  
+  \textbf{C2:} Jelaskan monadic operations: \texttt{and\_then}, \texttt{transform}, \texttt{or\_else}.
+  
+  \textbf{C3:} Refactor \texttt{solve\_power\_flow} pakai \texttt{and\_then} untuk chain validasi.
+  
+  \textbf{C4:} Analisis cache miss: Hitung L1 miss rate AoS vs SoA untuk stride-64 access.
+  
+  \textbf{C5:} Evaluasi: Kapan SoA TIDAK lebih cepat dari AoS? (Hint: single-pass streaming)
+  
+  \textbf{C6:} Desain \texttt{GridSOA} dengan SIMD-friendly alignment (\texttt{alignas(64)}).
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Problem Set: Capstone (C1--C6)}
+  \frametitle{Problem Set: Capstone — N-1 Contingency Engine}
+  
+  \textbf{C1:} Jelaskan alur N-1 contingency screening secara ringkas.
+  
+  \textbf{C2:} Mengapa \texttt{std::span} dipakai untuk split workload ke thread pool?
+  
+  \textbf{C3:} Modifikasi \texttt{worker\_thread} untuk handle exception di dalam thread.
+  
+  \textbf{C4:} Analisis race condition pada \texttt{global\_results} tanpa mutex.
+  
+  \textbf{C5:} Evaluasi: Kapan thread pool size > CPU cores bermanfaat?
+  
+  \textbf{C6:} Extend engine: Tambah \texttt{N-2} contingency dengan combinatorial generation
+  dan early pruning via \texttt{std::ranges}.
+\end{frame}
+
+\end{document}

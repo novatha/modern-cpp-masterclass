@@ -1,0 +1,21 @@
+% UB Logo - Simple text-based logo using TikZ
+% Save as assets/ub_logo.pdf by compiling this standalone
+\documentclass[tikz,border=2mm]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric}
+\definecolor{UBgreen}{RGB}{0,102,51}
+\definecolor{UBgold}{RGB}{204,153,0}
+\begin{document}
+\begin{tikzpicture}
+  % Outer circle
+  \draw[UBgreen, line width=2pt] (0,0) circle (1.2cm);
+  % Inner circle
+  \draw[UBgreen, line width=1pt] (0,0) circle (1.0cm);
+  % Text
+  \node[align=center, font=\bfseries\sffamily\small, text=UBgreen] at (0,0.3) {UNIVERSITAS\\BENGKULU};
+  % Gold accent line
+  \draw[UBgold, line width=2pt] (-0.7, -0.4) -- (0.7, -0.4);
+  % Year/Est
+  \node[font=\tiny\sffamily, text=UBgold] at (0, -0.7) {1982};
+\end{tikzpicture}
+\end{document}

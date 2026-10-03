@@ -1,0 +1,15 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+struct GridSOA {
+    std::vector<int> id;
+    std::vector<double> r;
+    std::vector<double> x;
+    std::vector<double> limit;
+
+    GridSOA(int size) : id(size), r(size), x(size), limit(size) {
+        std::iota(id.begin(), id.end(), 1);
+        std::fill(r.begin(), r.end(), 0.01);
+        std::fill(x.begin(), x.end(), 0.05);
+        std::fill(limit.begin(), limit.end(), 500.0);
+    }
+};
+\end{minted}

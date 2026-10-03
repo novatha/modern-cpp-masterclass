@@ -83,18 +83,53 @@ def write_snippet_tex(
     return out_file
 
 
-def write_index_tex(snippets: Dict[str, Path], out_dir: Path) -> Path:
+def write_index_tex(
+    snippets: Dict[str, Path], out_dir: Path, slides_dir: Path | None = None
+) -> Path:
     """Write an index file listing all snippets for easy inclusion."""
     index_file = out_dir / "_snippets_index.tex"
     lines = [
         "% Auto-generated snippet index",
-        "% Usage: \\input{docs/snippets/phase1-consteval-fib}",
+        "% Usage: \\input{../snippets/_snippets_index}",
         "",
     ]
     for name, path in sorted(snippets.items()):
-        rel_path = (
-            path.relative_to(out_dir.parent) if out_dir.parent in path.parents else path
-        )
+        # Calculate relative path from slides_dir to snippet file
+        if slides_dir:
+            try:
+                rel_path = path.relative_to(slides_dir)
+            except ValueError:
+                # If not relative (e.g., slides_dir=docs/slides, path=docs/snippets/...),
+                # go up from slides_dir to common parent (docs/) then to snippets
+                try:
+                    # Find common ancestor
+                    slides_parts = slides_dir.parts
+                    path_parts = path.parts
+                    common_len = 0
+                    for s, p in zip(slides_parts, path_parts):
+                        if s == p:
+                            common_len += 1
+                        else:
+                            break
+                    # Go up from slides_dir to common ancestor
+                    up_levels = len(slides_parts) - common_len
+                    # Then down to path from common ancestor
+                    down_parts = path_parts[common_len:]
+                    rel_parts = [".."] * up_levels + list(down_parts)
+                    rel_path = Path(*rel_parts)
+                except Exception:
+                    # Fallback
+                    rel_path = (
+                        path.relative_to(out_dir.parent)
+                        if out_dir.parent in path.parents
+                        else path
+                    )
+        else:
+            rel_path = (
+                path.relative_to(out_dir.parent)
+                if out_dir.parent in path.parents
+                else path
+            )
         lines.append(
             f"\\newcommand{{\\{name}}}{{\\input{{{rel_path.with_suffix('')}}}}}"
         )
@@ -110,6 +145,9 @@ def main():
         "--out", required=True, help="Output directory for .tex snippets"
     )
     parser.add_argument(
+        "--slides-dir", help="Slides directory (for correct relative paths in index)"
+    )
+    parser.add_argument(
         "--ext",
         nargs="*",
         default=[".cpp", ".cppm", ".hpp", ".h"],
@@ -118,6 +156,7 @@ def main():
     args = parser.parse_args()
 
     out_dir = Path(args.out).resolve()
+    slides_dir = Path(args.slides_dir).resolve() if args.slides_dir else None
 
     all_snippets: Dict[str, str] = {}
     files_processed = 0
@@ -157,14 +196,14 @@ def main():
         print(f"  Generated: {path.relative_to(out_dir.parent)}")
 
     # Write index
-    index_path = write_index_tex(written_paths, out_dir)
+    index_path = write_index_tex(written_paths, out_dir, slides_dir)
     print(f"\nIndex written: {index_path.relative_to(out_dir.parent)}")
     print("\nAdd to your LaTeX preamble:")
     print(f"  \\usepackage{{minted}}")
     print(f"  \\input{{{index_path.relative_to(out_dir.parent)}}}")
     print("\nThen use in slides:")
     print(
-        f"  \\phase1-consteval-fib   % expands to \\input{{docs/snippets/phase1-consteval-fib}}"
+        f"  \\phase1-consteval-fib   % expands to \\input{{../snippets/phase1-consteval-fib}}"
     )
 
 
