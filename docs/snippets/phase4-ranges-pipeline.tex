@@ -1,0 +1,14 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    auto critical_drops = readings 
+        | std::views::filter([](const SensorReading& r) { return r.is_valid; })              // Step 1: Ignore glitches
+        | std::views::filter([](const SensorReading& r) { return r.voltage_pu < 0.95; })     // Step 2: Find low voltage
+        | std::views::transform([](const SensorReading& r) {                                 // Step 3: Map to a string
+            return std::format("Time {}ms: CRITICAL VOLTAGE {:.2f} pu", r.time_ms, r.voltage_pu);
+        })
+        | std::views::take(2);                                                               // Step 4: Stop after finding 2
+
+    // The data is actually processed right here, one element at a time:
+    for (const std::string& alert : critical_drops) {
+        std::cout << "  -> " << alert << "\n";
+    }
+\end{minted}

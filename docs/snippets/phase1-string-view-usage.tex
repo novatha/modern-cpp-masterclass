@@ -1,0 +1,6 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    std::string full_log = "2026-10-01T11:45:00 [CRITICAL] Transformer Overload Detected";
+    // Passing substring view without copying or allocating new string
+    std::string_view log_view = full_log;
+    print_slice_info(log_view);
+\end{minted}

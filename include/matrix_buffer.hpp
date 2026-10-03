@@ -19,7 +19,9 @@ private:
     
     // RAII: Exclusive ownership of the memory block.
     // The memory is automatically freed when MatrixBuffer goes out of scope.
+    // SNIPPET: phase2-raii-unique-ptr
     std::unique_ptr<T[]> data_{nullptr}; 
+    // END SNIPPET
 
 public:
     // 1. Standard Constructor
@@ -34,6 +36,7 @@ public:
 
     // 3. Rule of Five: Enable Move Semantics
     // Efficiently steal the memory from a dying or temporary MatrixBuffer.
+    // SNIPPET: phase2-move-semantics
     MatrixBuffer(MatrixBuffer&& other) noexcept 
         : rows_(std::exchange(other.rows_, 0)),
           cols_(std::exchange(other.cols_, 0)),
@@ -47,11 +50,13 @@ public:
         }
         return *this;
     }
+    // END SNIPPET
 
     // Destructor is implicitly handled by std::unique_ptr! (Rule of Zero style)
     ~MatrixBuffer() = default;
 
     // 4. Modern access via std::span (Bounds-safe, non-owning view of a row)
+    // SNIPPET: phase2-span-row-access
     std::span<T> get_row(size_t row) {
         if (row >= rows_) throw std::out_of_range("Row index out of bounds");
         return std::span<T>(data_.get() + (row * cols_), cols_);
@@ -61,6 +66,7 @@ public:
         if (row >= rows_) throw std::out_of_range("Row index out of bounds");
         return std::span<const T>(data_.get() + (row * cols_), cols_);
     }
+    // END SNIPPET
 
     size_t rows() const { return rows_; }
     size_t cols() const { return cols_; }

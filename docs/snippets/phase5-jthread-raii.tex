@@ -1,0 +1,28 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    {
+        // We use std::jthread (Joining Thread) instead of older std::thread
+        std::vector<std::jthread> cluster;
+        
+        // Spawn 4 worker threads
+        for (int i = 0; i < 4; ++i) {
+            // std::jthread automatically generates a stop_token and passes it to the function!
+            cluster.emplace_back(worker_node, i + 1);
+        }
+        
+        safe_print("[Main] All nodes spawned. Letting them run for ~800ms...");
+        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+        
+        safe_print("\n[Main] Requesting all nodes to stop...");
+        
+        // We gently ask all threads to stop (flips their stop_token to true)
+        for (auto& node : cluster) {
+            node.request_stop();
+        }
+        
+        safe_print("[Main] End of scope reached. jthreads will automatically join!");
+        // --- THE MAGIC OF jthread ---
+        // Right here, as 'cluster' goes out of scope, the destructor for every std::jthread 
+        // is called. It will AUTOMATICALLY wait (.join()) for the threads to finish cleanly.
+        // Old std::thread would just crash the program if you forgot to call .join().
+    }
+\end{minted}

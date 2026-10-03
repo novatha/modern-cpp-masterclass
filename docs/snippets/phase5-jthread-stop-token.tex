@@ -1,0 +1,25 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+void worker_node(std::stop_token stoken, int node_id) {
+    safe_print(std::format("Node {} online.", node_id));
+    
+    int local_work = 0;
+    
+    // The loop checks if the main thread has requested it to stop.
+    // This allows the thread to finish its current calculation safely before exiting.
+    while (!stoken.stop_requested()) {
+        
+        // Simulate a complex N-1 contingency calculation (takes 100ms)
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
+        // Safely increment the global counter without a lock
+        total_contingencies_analyzed.fetch_add(1, std::memory_order_relaxed);
+        local_work++;
+        
+        if (local_work % 5 == 0) {
+            safe_print(std::format("  -> Node {} completed {} calculations...", node_id, local_work));
+        }
+    }
+    
+    safe_print(std::format("Node {} gracefully shutting down.", node_id));
+}
+\end{minted}

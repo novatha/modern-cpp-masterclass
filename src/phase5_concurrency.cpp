@@ -9,6 +9,7 @@
 // --- Synchronization: Mutex and Scoped Lock ---
 // When multiple threads print to std::cout at the same time, the text gets garbled.
 // We use a mutex to ensure only one thread prints at a time.
+// SNIPPET: phase5-mutex-scoped-lock
 std::mutex log_mutex;
 
 void safe_print(const std::string& msg) {
@@ -18,14 +19,18 @@ void safe_print(const std::string& msg) {
     std::scoped_lock lock(log_mutex);
     std::cout << msg << "\n";
 }
+// END SNIPPET
 
 // --- Atomics: Lock-Free Thread Safety ---
 // We want to count total tasks completed. Using a mutex just to increment a number is very slow.
 // std::atomic allows multiple threads to safely increment the number concurrently without locks.
+// SNIPPET: phase5-atomic-counter
 std::atomic<int> total_contingencies_analyzed{0};
+// END SNIPPET
 
 // --- C++20 Cooperative Cancellation (std::stop_token) ---
 // This is the worker function. It receives a 'stop_token' from its controlling thread.
+// SNIPPET: phase5-jthread-stop-token
 void worker_node(std::stop_token stoken, int node_id) {
     safe_print(std::format("Node {} online.", node_id));
     
@@ -49,10 +54,12 @@ void worker_node(std::stop_token stoken, int node_id) {
     
     safe_print(std::format("Node {} gracefully shutting down.", node_id));
 }
+// END SNIPPET
 
 int main() {
     std::cout << "=== Phase 5: Modern Concurrency (C++20 std::jthread) ===\n\n";
 
+    // SNIPPET: phase5-jthread-raii
     {
         // We use std::jthread (Joining Thread) instead of older std::thread
         std::vector<std::jthread> cluster;
@@ -79,6 +86,7 @@ int main() {
         // is called. It will AUTOMATICALLY wait (.join()) for the threads to finish cleanly.
         // Old std::thread would just crash the program if you forgot to call .join().
     } 
+    // END SNIPPET
 
     std::cout << std::format("\n[Main] Final Report: {} total contingencies analyzed safely.\n", 
                              total_contingencies_analyzed.load());

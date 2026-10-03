@@ -1,0 +1,11 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    std::span<T> get_row(size_t row) {
+        if (row >= rows_) throw std::out_of_range("Row index out of bounds");
+        return std::span<T>(data_.get() + (row * cols_), cols_);
+    }
+    
+    std::span<const T> get_row(size_t row) const {
+        if (row >= rows_) throw std::out_of_range("Row index out of bounds");
+        return std::span<const T>(data_.get() + (row * cols_), cols_);
+    }
+\end{minted}

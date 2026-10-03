@@ -37,6 +37,7 @@ int main() {
        With C++20, we use the pipe operator `|` to chain "views".
        Views are LAZY. They don't copy data. They just describe the operations.
     */
+    // SNIPPET: phase4-ranges-pipeline
     auto critical_drops = readings 
         | std::views::filter([](const SensorReading& r) { return r.is_valid; })              // Step 1: Ignore glitches
         | std::views::filter([](const SensorReading& r) { return r.voltage_pu < 0.95; })     // Step 2: Find low voltage
@@ -49,12 +50,14 @@ int main() {
     for (const std::string& alert : critical_drops) {
         std::cout << "  -> " << alert << "\n";
     }
+    // END SNIPPET
 
 
     std::cout << "\n--- 2. Modern Error Handling (std::optional) ---\n";
     
     // In old C++, if a search failed, you returned `-1` or `nullptr`.
     // In modern C++, you return `std::optional` to explicitly say "This might fail".
+    // SNIPPET: phase4-optional-find
     auto find_first_drop = [](const std::vector<SensorReading>& data) -> std::optional<int> {
         for (const auto& r : data) {
             if (r.is_valid && r.voltage_pu < 0.90) {
@@ -70,6 +73,7 @@ int main() {
     } else {
         std::cout << "  -> No extreme drops detected.\n";
     }
+    // END SNIPPET
 
     return 0;
 }

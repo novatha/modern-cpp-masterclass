@@ -1,0 +1,17 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    auto find_first_drop = [](const std::vector<SensorReading>& data) -> std::optional<int> {
+        for (const auto& r : data) {
+            if (r.is_valid && r.voltage_pu < 0.90) {
+                return r.time_ms; // Found it!
+            }
+        }
+        return std::nullopt; // No data matched
+    };
+
+    // The "if with initializer" syntax (C++17) combined with optional
+    if (auto drop_time = find_first_drop(readings); drop_time.has_value()) {
+        std::cout << "  -> Extreme drop (<0.90) detected at " << drop_time.value() << "ms\n";
+    } else {
+        std::cout << "  -> No extreme drops detected.\n";
+    }
+\end{minted}

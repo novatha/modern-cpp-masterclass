@@ -1,0 +1,7 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+void print_slice_info(std::string_view text) {
+    std::cout << std::format("Slice length: {}, prefix(4): \"{}\"\n", 
+                             text.size(), 
+                             text.substr(0, std::min<size_t>(4, text.size())));
+}
+\end{minted}

@@ -1,0 +1,15 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    MatrixBuffer(MatrixBuffer&& other) noexcept 
+        : rows_(std::exchange(other.rows_, 0)),
+          cols_(std::exchange(other.cols_, 0)),
+          data_(std::move(other.data_)) {}
+
+    MatrixBuffer& operator=(MatrixBuffer&& other) noexcept {
+        if (this != &other) {
+            rows_ = std::exchange(other.rows_, 0);
+            cols_ = std::exchange(other.cols_, 0);
+            data_ = std::move(other.data_); // Safely overwrites and frees current memory
+        }
+        return *this;
+    }
+\end{minted}

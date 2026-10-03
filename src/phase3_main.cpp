@@ -15,15 +15,18 @@ struct LineTripEvent {
     
     // Because this method exists and returns a string, 
     // the compiler recognizes LineTripEvent as a "LoggableEvent".
+    // SNIPPET: phase3-loggable-event
     std::string message() const {
         return std::format("CRITICAL: {} has tripped. N-1 constraint violated.", line_id);
     }
+    // END SNIPPET
 };
 
 int main() {
     std::cout << "=== Phase 3: Generic Event Dispatcher (C++20 Concepts) ===\n\n";
     grid_events::EventBus bus;
 
+    // SNIPPET: phase3-subscribe-publish
     // Subscribe to Voltage drops
     bus.subscribe<VoltageDropEvent>([](const VoltageDropEvent& e) {
         std::cout << std::format("  -> [Controller A] Detected {} voltage drop to {:.2f} pu\n", 
@@ -44,6 +47,7 @@ int main() {
     std::cout << "\n--- Publishing LineTripEvent ---\n";
     // This IS a LoggableEvent. The bus will auto-log it before triggering the handlers!
     bus.publish(LineTripEvent{"Line_L42"});
+    // END SNIPPET
 
     // ========================================================================
     // THE POWER OF CONCEPTS (Error Prevention)

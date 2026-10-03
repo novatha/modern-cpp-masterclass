@@ -1,0 +1,16 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    Measurement m{"Bus-01_Sensor", 230.5, 12.8};
+    auto [name, v, i] = m; // unpacks struct fields cleanly
+    double power = v * i;
+    std::cout << std::format("[2] Structured Binding:\n"
+                             "    Sensor: {}\n"
+                             "    Voltage: {:.1f} V, Current: {:.1f} A -> Apparent Power: {:.2f} VA\n",
+                             name, v, i, power);
+
+    // Structured binding with std::tuple / std::pair
+    auto get_coordinates = []() -> std::pair<double, double> {
+        return {-0.7893, 100.3542}; // e.g., Padang / Sumatra latitude & longitude
+    };
+    auto [lat, lon] = get_coordinates();
+    std::cout << std::format("    Coordinates: ({:.4f}, {:.4f})\n", lat, lon);
+\end{minted}

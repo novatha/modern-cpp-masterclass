@@ -1,0 +1,7 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+    for (std::vector<double> readings{1.02, 0.99, 1.05, 0.96}; 
+         const auto& val : readings) {
+        std::cout << std::format("    Voltage pu: {:.2f} ({})\n", 
+                                 val, (val >= 0.95 && val <= 1.05) ? "NORMAL" : "VIOLATION");
+    }
+\end{minted}

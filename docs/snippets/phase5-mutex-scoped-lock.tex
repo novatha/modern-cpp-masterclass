@@ -1,0 +1,11 @@
+\begin{minted}[linenos,breaklines,frame=lines,framesep=2mm]{cpp}
+std::mutex log_mutex;
+
+void safe_print(const std::string& msg) {
+    // std::scoped_lock (C++17) is RAII for locks. 
+    // It locks the mutex here, and AUTOMATICALLY unlocks it when the function ends.
+    // If an exception occurs, it still unlocks safely. No deadlocks!
+    std::scoped_lock lock(log_mutex);
+    std::cout << msg << "\n";
+}
+\end{minted}
