@@ -114,6 +114,13 @@ target_include_directories(mini_project_3 PRIVATE include)
 # Phase 4: Modern STL, Ranges & Functional Pipelines
 # ==============================================================================
 add_executable(mini_project_4 src/phase4_ranges.cpp)
+target_include_directories(mini_project_4 PRIVATE src)
+
+# Phase 4: Ranges Tests
+add_executable(test_ranges tests/test_ranges.cpp)
+target_include_directories(test_ranges PRIVATE src)
+target_link_libraries(test_ranges PRIVATE Catch2::Catch2WithMain)
+catch_discover_tests(test_ranges)
 
 # ==============================================================================
 # Phase 5: Concurrency, Multithreading & Performance
