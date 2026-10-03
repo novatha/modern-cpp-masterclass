@@ -6,7 +6,18 @@ project(ModernCppLearning VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+# NOTE: module scanning (CXX_SCAN_FOR_MODULES) is set per-target on the C++20
+# module targets below, NOT globally. A global ON leaks into try_compile()
+# (e.g. Catch2's compiler-flag checks) and breaks compilers without import
+# graph discovery, GCC 13: "compiler does not provide a way to discover the
+# import graph dependencies".
+
+# C++20 modules demos/tests require a Clang-family compiler.
+set(BUILD_CXX_MODULE_TARGETS ON)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(STATUS "GNU ${CMAKE_CXX_COMPILER_VERSION}: skipping C++20 module targets (no module scanning support; use Clang)")
+    set(BUILD_CXX_MODULE_TARGETS OFF)
+endif()
 
 # Export compile commands for language servers (clangd / ccls)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -75,15 +86,18 @@ target_include_directories(test_log_parser PRIVATE src)
 target_compile_definitions(test_log_parser PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 target_link_libraries(test_log_parser PRIVATE Catch2::Catch2WithMain)
 
-# Phase 1 Module Tests (requires C++20 modules)
-add_executable(test_grid_parser tests/test_grid_parser.cpp)
-target_compile_features(test_grid_parser PRIVATE cxx_std_20)
-target_sources(test_grid_parser
-  PUBLIC
-    FILE_SET CXX_MODULES FILES
-    src/grid_parser.cppm
-)
-target_link_libraries(test_grid_parser PRIVATE Catch2::Catch2WithMain)
+# Phase 1 Module Tests (requires C++20 modules + Clang)
+if (BUILD_CXX_MODULE_TARGETS)
+    add_executable(test_grid_parser tests/test_grid_parser.cpp)
+    target_compile_features(test_grid_parser PRIVATE cxx_std_20)
+    target_sources(test_grid_parser
+      PUBLIC
+        FILE_SET CXX_MODULES FILES
+        src/grid_parser.cppm
+    )
+    target_link_libraries(test_grid_parser PRIVATE Catch2::Catch2WithMain)
+    set_property(TARGET test_grid_parser PROPERTY CXX_SCAN_FOR_MODULES ON)
+endif()
 
 # Phase 5: Concurrency Tests
 add_executable(test_concurrency tests/test_concurrency.cpp)
@@ -100,7 +114,9 @@ include(Catch)
 catch_discover_tests(test_matrix)
 catch_discover_tests(test_event_dispatcher)
 catch_discover_tests(test_log_parser)
-catch_discover_tests(test_grid_parser)
+if (BUILD_CXX_MODULE_TARGETS)
+    catch_discover_tests(test_grid_parser)
+endif()
 catch_discover_tests(test_concurrency)
 catch_discover_tests(test_phase6)
 
@@ -141,10 +157,13 @@ target_compile_features(mini_project_6 PRIVATE cxx_std_23)
 # ==============================================================================
 # Phase 1 Re-do: True C++20 Modules with LLVM
 # ==============================================================================
-add_executable(phase1_modules src/phase1_modules.cpp)
-target_compile_features(phase1_modules PRIVATE cxx_std_20)
-target_sources(phase1_modules
-  PUBLIC
-    FILE_SET CXX_MODULES FILES
-    src/grid_parser.cppm
-)
+if (BUILD_CXX_MODULE_TARGETS)
+    add_executable(phase1_modules src/phase1_modules.cpp)
+    target_compile_features(phase1_modules PRIVATE cxx_std_20)
+    target_sources(phase1_modules
+      PUBLIC
+        FILE_SET CXX_MODULES FILES
+        src/grid_parser.cppm
+    )
+    set_property(TARGET phase1_modules PROPERTY CXX_SCAN_FOR_MODULES ON)
+endif()
