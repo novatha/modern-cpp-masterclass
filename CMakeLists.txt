@@ -63,10 +63,44 @@ add_executable(test_matrix tests/test_matrix.cpp)
 target_include_directories(test_matrix PRIVATE include)
 target_link_libraries(test_matrix PRIVATE Catch2::Catch2WithMain)
 
+# Phase 3: EventDispatcher Concepts Tests
+add_executable(test_event_dispatcher tests/test_event_dispatcher.cpp)
+target_include_directories(test_event_dispatcher PRIVATE include)
+target_link_libraries(test_event_dispatcher PRIVATE Catch2::Catch2WithMain)
+
+# Phase 1/Log Parsing Tests
+add_executable(test_log_parser tests/test_log_parser.cpp src/log_parser.cpp)
+target_include_directories(test_log_parser PRIVATE src)
+target_link_libraries(test_log_parser PRIVATE Catch2::Catch2WithMain)
+
+# Phase 1 Module Tests (requires C++20 modules)
+add_executable(test_grid_parser tests/test_grid_parser.cpp)
+target_compile_features(test_grid_parser PRIVATE cxx_std_20)
+target_sources(test_grid_parser
+  PUBLIC
+    FILE_SET CXX_MODULES FILES
+    src/grid_parser.cppm
+)
+target_link_libraries(test_grid_parser PRIVATE Catch2::Catch2WithMain)
+
+# Phase 5: Concurrency Tests
+add_executable(test_concurrency tests/test_concurrency.cpp)
+target_link_libraries(test_concurrency PRIVATE Catch2::Catch2WithMain)
+
+# Phase 6: Advanced/C++23 Tests
+add_executable(test_phase6 tests/test_phase6.cpp)
+target_compile_features(test_phase6 PRIVATE cxx_std_23)
+target_link_libraries(test_phase6 PRIVATE Catch2::Catch2WithMain)
+
 # Enable CTest runner
 enable_testing()
 include(Catch)
 catch_discover_tests(test_matrix)
+catch_discover_tests(test_event_dispatcher)
+catch_discover_tests(test_log_parser)
+catch_discover_tests(test_grid_parser)
+catch_discover_tests(test_concurrency)
+catch_discover_tests(test_phase6)
 
 # ==============================================================================
 # Phase 3: Generic Programming & Concepts
