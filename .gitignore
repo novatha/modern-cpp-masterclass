@@ -59,8 +59,13 @@ env/
 # Catch2 / FetchContent (downloaded in build/_deps anyway)
 _deps/
 
-# Chat transcript (generated)
-chat_transcript.txt
+# PyInstaller & Packaging
+dist/
+dmg_staging/
+*.dmg
+*.egg-info/
+hasil_*.json
+pid.txt
 
 # Session summaries (optional - keep if you want versioned)
 # session_summary_*.md

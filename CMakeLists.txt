@@ -149,6 +149,82 @@ add_executable(mini_project_5 src/phase5_concurrency.cpp)
 add_executable(capstone_project src/capstone_main.cpp)
 
 # ==============================================================================
+# POWER FLOW ENGINE (Eigen + DC Power Flow)
+# ==============================================================================
+message(STATUS "Fetching Eigen3 (Linear Algebra)...")
+FetchContent_Declare(
+  Eigen3
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_TAG        3.4.0
+)
+FetchContent_MakeAvailable(Eigen3)
+
+add_executable(dc_powerflow src/dc_powerflow.cpp)
+target_compile_features(dc_powerflow PRIVATE cxx_std_20)
+target_link_libraries(dc_powerflow PRIVATE Eigen3::Eigen)
+
+add_executable(ac_powerflow src/ac_powerflow.cpp)
+target_compile_features(ac_powerflow PRIVATE cxx_std_20)
+target_link_libraries(ac_powerflow PRIVATE Eigen3::Eigen)
+
+# Optional SuiteSparse KLU Support
+find_path(SUITESPARSE_INCLUDE_DIR NAMES suitesparse/klu.h PATHS /opt/homebrew/include /usr/local/include)
+find_path(KLU_INCLUDE_DIR NAMES klu.h PATHS /opt/homebrew/include/suitesparse /usr/local/include/suitesparse)
+find_library(KLU_LIB NAMES klu PATHS /opt/homebrew/lib /usr/local/lib)
+find_library(BTF_LIB NAMES btf PATHS /opt/homebrew/lib /usr/local/lib)
+find_library(COLAMD_LIB NAMES colamd PATHS /opt/homebrew/lib /usr/local/lib)
+find_library(AMD_LIB NAMES amd PATHS /opt/homebrew/lib /usr/local/lib)
+find_library(SUITESPARSECONFIG_LIB NAMES suitesparseconfig PATHS /opt/homebrew/lib /usr/local/lib)
+
+if (KLU_LIB AND KLU_INCLUDE_DIR)
+    message(STATUS "Found SuiteSparse KLU: ${KLU_LIB}")
+    target_compile_definitions(ac_powerflow PRIVATE HAVE_KLU=1)
+    target_include_directories(ac_powerflow PRIVATE ${KLU_INCLUDE_DIR} ${SUITESPARSE_INCLUDE_DIR})
+    target_link_libraries(ac_powerflow PRIVATE ${KLU_LIB} ${BTF_LIB} ${COLAMD_LIB} ${AMD_LIB} ${SUITESPARSECONFIG_LIB})
+endif()
+
+add_executable(fast_decoupled src/fast_decoupled.cpp)
+target_compile_features(fast_decoupled PRIVATE cxx_std_20)
+target_link_libraries(fast_decoupled PRIVATE Eigen3::Eigen)
+
+add_executable(contingency_analysis src/contingency_analysis.cpp)
+target_compile_features(contingency_analysis PRIVATE cxx_std_20)
+target_link_libraries(contingency_analysis PRIVATE Eigen3::Eigen)
+if (KLU_LIB AND KLU_INCLUDE_DIR)
+    target_compile_definitions(contingency_analysis PRIVATE HAVE_KLU=1)
+    target_include_directories(contingency_analysis PRIVATE ${KLU_INCLUDE_DIR} ${SUITESPARSE_INCLUDE_DIR})
+    target_link_libraries(contingency_analysis PRIVATE ${KLU_LIB} ${BTF_LIB} ${COLAMD_LIB} ${AMD_LIB} ${SUITESPARSECONFIG_LIB})
+endif()
+
+add_executable(contingency_n2 src/contingency_n2.cpp)
+target_compile_features(contingency_n2 PRIVATE cxx_std_20)
+target_link_libraries(contingency_n2 PRIVATE Eigen3::Eigen)
+if (KLU_LIB AND KLU_INCLUDE_DIR)
+    target_compile_definitions(contingency_n2 PRIVATE HAVE_KLU=1)
+    target_include_directories(contingency_n2 PRIVATE ${KLU_INCLUDE_DIR} ${SUITESPARSE_INCLUDE_DIR})
+    target_link_libraries(contingency_n2 PRIVATE ${KLU_LIB} ${BTF_LIB} ${COLAMD_LIB} ${AMD_LIB} ${SUITESPARSECONFIG_LIB})
+endif()
+find_library(CHOLMOD_LIB NAMES cholmod PATHS /opt/homebrew/lib /usr/local/lib)
+if (CHOLMOD_LIB)
+    target_link_libraries(contingency_n2 PRIVATE ${CHOLMOD_LIB})
+endif()
+
+add_executable(contingency_n2_cholesky src/contingency_n2_cholesky.cpp)
+target_compile_features(contingency_n2_cholesky PRIVATE cxx_std_20)
+target_link_libraries(contingency_n2_cholesky PRIVATE Eigen3::Eigen)
+
+add_executable(contingency_n2_woodbury src/contingency_n2_woodbury.cpp)
+target_compile_features(contingency_n2_woodbury PRIVATE cxx_std_20)
+target_link_libraries(contingency_n2_woodbury PRIVATE Eigen3::Eigen)
+if (CHOLMOD_LIB)
+    target_compile_definitions(contingency_n2_woodbury PRIVATE USE_CHOLMOD)
+    target_include_directories(contingency_n2_woodbury PRIVATE /opt/homebrew/include/suitesparse /opt/homebrew/include)
+    target_link_libraries(contingency_n2_woodbury PRIVATE ${CHOLMOD_LIB})
+endif()
+
+
+
+# ==============================================================================
 # Phase 6: Advanced Hardware Sympathy & C++23
 # ==============================================================================
 add_executable(mini_project_6 src/phase6_advanced.cpp)

@@ -1,0 +1,56 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'gui/**'
+      - 'src/**'
+      - 'include/**'
+      - 'scripts/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/build-windows.yml'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PySide6 networkx scipy matplotlib numpy pyinstaller pillow
+
+      - name: Setup MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build C++20 Woodbury Engine
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release --target contingency_n2_woodbury
+
+      - name: Build Application with PyInstaller
+        run: |
+          pyinstaller --noconfirm --clean GridGuard_win.spec
+
+      - name: Install Inno Setup
+        run: choco install innosetup
+
+      - name: Build Windows Installer with Inno Setup
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer_windows.iss
+
+      - name: Upload Windows Installer (.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: GridGuard-N2-Windows-Setup-v2.1
+          path: dist/GridGuard-N2-Windows-Setup-v2.1.exe

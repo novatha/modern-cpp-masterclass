@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>GridGuard - Topologi Interaktif case14.m</title>
+  <script type="text/javascript" src="vis-network.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #030712;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      color: #f8fafc;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    #network {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #toolbar {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 1000;
+      background: rgba(17, 24, 39, 0.92);
+      backdrop-filter: blur(8px);
+      padding: 14px 20px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      max-width: 480px;
+    }
+    h1 {
+      margin: 0 0 6px 0;
+      color: #38bdf8;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    p {
+      margin: 0 0 10px 0;
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+    .badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-slack { background: #991b1b; color: #fecaca; border: 1px solid #ef4444; }
+    .badge-pv { background: #9a3412; color: #fed7aa; border: 1px solid #f97316; }
+    .badge-pq { background: #1e3a8a; color: #bfdbfe; border: 1px solid #3b82f6; }
+    .controls {
+      display: flex;
+      gap: 6px;
+    }
+    button {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    button:hover {
+      background: #334155;
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+    #status-hint {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: rgba(17, 24, 39, 0.85);
+      border: 1px solid #334155;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 11px;
+      color: #cbd5e1;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <h1>⚡ Topologi Transmisi Interaktif: case14.m</h1>
+    <p>💡 <b>Bebas Tumpang Tindih:</b> Geser (drag) sembarang bus untuk merapikan tata letak • Scroll mouse / pinch untuk zoom • Arahkan kursor untuk info daya & impedansi $Z$.</p>
+    <div class="badges">
+      <span class="badge badge-slack">● Bus Slack (Gen Utama)</span>
+      <span class="badge badge-pv">● Bus PV (Pembangkit)</span>
+      <span class="badge badge-pq">● Bus PQ (Beban)</span>
+    </div>
+    <div class="controls">
+      <button onclick="network.fit({animation: true})">⛶ Fit Layar</button>
+      <button onclick="togglePhysics()">⏸ Toggle Fisika</button>
+      <button onclick="stabilizeAndStop()">🔒 Kunci Posisi</button>
+    </div>
+  </div>
+
+  <div id="status-hint">💡 Klik & tahan node untuk memindahkan • Tarik latar belakang untuk pan</div>
+  <div id="network"></div>
+
+  <script>
+    var nodes = new vis.DataSet([{"id": 1, "label": "Bus 1", "color": {"background": "#ef4444", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #1</b><br><b>Klasifikasi:</b> Bus Slack (Generator Utama)<br><b>Tegangan V:</b> 1.060 p.u. (Sudut: 0.0\u00b0)<br><b>Beban Pd:</b> 0.0 MW | <b>Qd:</b> 0.0 MVAr<br><b style='color: #4ade80;'>Pembangkit Pg:</b> 232.4 MW | <b>Qg:</b> -16.9 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 24, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 2, "label": "Bus 2", "color": {"background": "#f97316", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #2</b><br><b>Klasifikasi:</b> Bus Generator PV<br><b>Tegangan V:</b> 1.045 p.u. (Sudut: -5.0\u00b0)<br><b>Beban Pd:</b> 21.7 MW | <b>Qd:</b> 12.7 MVAr<br><b style='color: #4ade80;'>Pembangkit Pg:</b> 40.0 MW | <b>Qg:</b> 42.4 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 20, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 3, "label": "Bus 3", "color": {"background": "#f97316", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #3</b><br><b>Klasifikasi:</b> Bus Generator PV<br><b>Tegangan V:</b> 1.010 p.u. (Sudut: -12.7\u00b0)<br><b>Beban Pd:</b> 94.2 MW | <b>Qd:</b> 19.0 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 20, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 4, "label": "Bus 4", "color": {"background": "#3b82f6", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #4</b><br><b>Klasifikasi:</b> Bus Beban PQ<br><b>Tegangan V:</b> 1.019 p.u. (Sudut: -10.3\u00b0)<br><b>Beban Pd:</b> 47.8 MW | <b>Qd:</b> -3.9 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 16, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 5, "label": "Bus 5", "color": {"background": "#3b82f6", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #5</b><br><b>Klasifikasi:</b> Bus Beban PQ<br><b>Tegangan V:</b> 1.020 p.u. (Sudut: -8.8\u00b0)<br><b>Beban Pd:</b> 7.6 MW | <b>Qd:</b> 1.6 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 16, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 6, "label": "Bus 6", "color": {"background": "#f97316", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #6</b><br><b>Klasifikasi:</b> Bus Generator PV<br><b>Tegangan V:</b> 1.070 p.u. (Sudut: -14.2\u00b0)<br><b>Beban Pd:</b> 11.2 MW | <b>Qd:</b> 7.5 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 20, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 7, "label": "Bus 7", "color": {"background": "#3b82f6", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #7</b><br><b>Klasifikasi:</b> Bus Beban PQ<br><b>Tegangan V:</b> 1.062 p.u. (Sudut: -13.4\u00b0)<br><b>Beban Pd:</b> 0.0 MW | <b>Qd:</b> 0.0 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 16, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 8, "label": "Bus 8", "color": {"background": "#f97316", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #8</b><br><b>Klasifikasi:</b> Bus Generator PV<br><b>Tegangan V:</b> 1.090 p.u. (Sudut: -13.4\u00b0)<br><b>Beban Pd:</b> 0.0 MW | <b>Qd:</b> 0.0 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 20, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 9, "label": "Bus 9", "color": {"background": "#3b82f6", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #9</b><br><b>Klasifikasi:</b> Bus Beban PQ<br><b>Tegangan V:</b> 1.056 p.u. (Sudut: -14.9\u00b0)<br><b>Beban Pd:</b> 29.5 MW | <b>Qd:</b> 16.6 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 16, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 10, "label": "Bus 10", "color": {"background": "#3b82f6", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #10</b><br><b>Klasifikasi:</b> Bus Beban PQ<br><b>Tegangan V:</b> 1.051 p.u. (Sudut: -15.1\u00b0)<br><b>Beban Pd:</b> 9.0 MW | <b>Qd:</b> 5.8 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 16, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 11, "label": "Bus 11", "color": {"background": "#3b82f6", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #11</b><br><b>Klasifikasi:</b> Bus Beban PQ<br><b>Tegangan V:</b> 1.057 p.u. (Sudut: -14.8\u00b0)<br><b>Beban Pd:</b> 3.5 MW | <b>Qd:</b> 1.8 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 16, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 12, "label": "Bus 12", "color": {"background": "#3b82f6", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #12</b><br><b>Klasifikasi:</b> Bus Beban PQ<br><b>Tegangan V:</b> 1.055 p.u. (Sudut: -15.1\u00b0)<br><b>Beban Pd:</b> 6.1 MW | <b>Qd:</b> 1.6 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 16, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 13, "label": "Bus 13", "color": {"background": "#3b82f6", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #13</b><br><b>Klasifikasi:</b> Bus Beban PQ<br><b>Tegangan V:</b> 1.050 p.u. (Sudut: -15.2\u00b0)<br><b>Beban Pd:</b> 13.5 MW | <b>Qd:</b> 5.8 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 16, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}, {"id": 14, "label": "Bus 14", "color": {"background": "#3b82f6", "border": "#ffffff", "highlight": {"background": "#38bdf8", "border": "#ffffff"}, "hover": {"background": "#60a5fa", "border": "#ffffff"}}, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 13px; line-height: 1.5; color: #f8fafc;'><b style='font-size: 14px; color: #38bdf8;'>\u26a1 Gardu Induk / Bus #14</b><br><b>Klasifikasi:</b> Bus Beban PQ<br><b>Tegangan V:</b> 1.036 p.u. (Sudut: -16.0\u00b0)<br><b>Beban Pd:</b> 14.9 MW | <b>Qd:</b> 5.0 MVAr<br></div>", "font": {"color": "#ffffff", "face": "Segoe UI, sans-serif", "size": 13, "bold": true}, "size": 16, "shadow": {"enabled": true, "color": "rgba(0,0,0,0.5)", "size": 6, "x": 2, "y": 2}}]);
+    var edges = new vis.DataSet([{"from": 1, "to": 2, "length": 107, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #1: Bus 1 \u2794 Bus 2</b><br><b>Impedansi Z:</b> 0.06226 p.u.<br><b>Resistansi R:</b> 0.01938 p.u.<br><b>Reaktansi X:</b> 0.05917 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 1, "to": 5, "length": 179, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #2: Bus 1 \u2794 Bus 5</b><br><b>Impedansi Z:</b> 0.22949 p.u.<br><b>Resistansi R:</b> 0.05403 p.u.<br><b>Reaktansi X:</b> 0.22304 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 2, "to": 3, "length": 168, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #3: Bus 2 \u2794 Bus 3</b><br><b>Impedansi Z:</b> 0.20347 p.u.<br><b>Resistansi R:</b> 0.04699 p.u.<br><b>Reaktansi X:</b> 0.19797 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 2, "to": 4, "length": 160, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #4: Bus 2 \u2794 Bus 4</b><br><b>Impedansi Z:</b> 0.18565 p.u.<br><b>Resistansi R:</b> 0.05811 p.u.<br><b>Reaktansi X:</b> 0.17632 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 2, "to": 5, "length": 159, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #5: Bus 2 \u2794 Bus 5</b><br><b>Impedansi Z:</b> 0.18297 p.u.<br><b>Resistansi R:</b> 0.05695 p.u.<br><b>Reaktansi X:</b> 0.17388 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 3, "to": 4, "length": 159, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #6: Bus 3 \u2794 Bus 4</b><br><b>Impedansi Z:</b> 0.18369 p.u.<br><b>Resistansi R:</b> 0.06701 p.u.<br><b>Reaktansi X:</b> 0.17103 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 4, "to": 5, "length": 100, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #7: Bus 4 \u2794 Bus 5</b><br><b>Impedansi Z:</b> 0.04418 p.u.<br><b>Resistansi R:</b> 0.01335 p.u.<br><b>Reaktansi X:</b> 0.04211 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 4, "to": 7, "length": 170, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #8: Bus 4 \u2794 Bus 7</b><br><b>Impedansi Z:</b> 0.20912 p.u.<br><b>Resistansi R:</b> 0.00000 p.u.<br><b>Reaktansi X:</b> 0.20912 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 4, "to": 9, "length": 319, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #9: Bus 4 \u2794 Bus 9</b><br><b>Impedansi Z:</b> 0.55618 p.u.<br><b>Resistansi R:</b> 0.00000 p.u.<br><b>Reaktansi X:</b> 0.55618 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 5, "to": 6, "length": 189, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #10: Bus 5 \u2794 Bus 6</b><br><b>Impedansi Z:</b> 0.25202 p.u.<br><b>Resistansi R:</b> 0.00000 p.u.<br><b>Reaktansi X:</b> 0.25202 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 6, "to": 11, "length": 175, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #11: Bus 6 \u2794 Bus 11</b><br><b>Impedansi Z:</b> 0.22041 p.u.<br><b>Resistansi R:</b> 0.09498 p.u.<br><b>Reaktansi X:</b> 0.19890 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 6, "to": 12, "length": 202, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #12: Bus 6 \u2794 Bus 12</b><br><b>Impedansi Z:</b> 0.28381 p.u.<br><b>Resistansi R:</b> 0.12291 p.u.<br><b>Reaktansi X:</b> 0.25581 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 6, "to": 13, "length": 143, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #13: Bus 6 \u2794 Bus 13</b><br><b>Impedansi Z:</b> 0.14610 p.u.<br><b>Resistansi R:</b> 0.06615 p.u.<br><b>Reaktansi X:</b> 0.13027 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 7, "to": 8, "length": 156, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #14: Bus 7 \u2794 Bus 8</b><br><b>Impedansi Z:</b> 0.17615 p.u.<br><b>Resistansi R:</b> 0.00000 p.u.<br><b>Reaktansi X:</b> 0.17615 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 7, "to": 9, "length": 128, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #15: Bus 7 \u2794 Bus 9</b><br><b>Impedansi Z:</b> 0.11001 p.u.<br><b>Resistansi R:</b> 0.00000 p.u.<br><b>Reaktansi X:</b> 0.11001 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 9, "to": 10, "length": 119, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #16: Bus 9 \u2794 Bus 10</b><br><b>Impedansi Z:</b> 0.09029 p.u.<br><b>Resistansi R:</b> 0.03181 p.u.<br><b>Reaktansi X:</b> 0.08450 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 9, "to": 14, "length": 209, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #17: Bus 9 \u2794 Bus 14</b><br><b>Impedansi Z:</b> 0.29877 p.u.<br><b>Resistansi R:</b> 0.12711 p.u.<br><b>Reaktansi X:</b> 0.27038 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 10, "to": 11, "length": 170, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #18: Bus 10 \u2794 Bus 11</b><br><b>Impedansi Z:</b> 0.20886 p.u.<br><b>Resistansi R:</b> 0.08205 p.u.<br><b>Reaktansi X:</b> 0.19207 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 12, "to": 13, "length": 209, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #19: Bus 12 \u2794 Bus 13</b><br><b>Impedansi Z:</b> 0.29792 p.u.<br><b>Resistansi R:</b> 0.22092 p.u.<br><b>Reaktansi X:</b> 0.19988 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}, {"from": 13, "to": 14, "length": 247, "title": "<div style='font-family: Segoe UI, sans-serif; font-size: 12px; line-height: 1.4; color: #f8fafc;'><b style='color: #38bdf8;'>Transmisi #20: Bus 13 \u2794 Bus 14</b><br><b>Impedansi Z:</b> 0.38773 p.u.<br><b>Resistansi R:</b> 0.17093 p.u.<br><b>Reaktansi X:</b> 0.34802 p.u.<br></div>", "color": {"color": "#64748b", "highlight": "#38bdf8", "hover": "#38bdf8"}, "width": 2, "smooth": {"type": "continuous", "roundness": 0.1}}]);
+    var container = document.getElementById('network');
+    var data = { nodes: nodes, edges: edges };
+    
+    var physicsEnabled = true;
+    var options = {
+      physics: {
+        enabled: true,
+        barnesHut: {
+          gravitationalConstant: -4200,
+          centralGravity: 0.22,
+          springLength: 100,
+          springConstant: 0.045,
+          damping: 0.12,
+          avoidOverlap: 1.0
+        },
+        stabilization: {
+          enabled: true,
+          iterations: 350,
+          updateInterval: 25
+        }
+      },
+      interaction: {
+        hover: true,
+        hoverConnectedEdges: true,
+        tooltipDelay: 100,
+        zoomView: true,
+        dragView: true,
+        dragNodes: true
+      },
+      nodes: {
+        borderWidth: 2,
+        borderWidthSelected: 3
+      }
+    };
+
+    var network = new vis.Network(container, data, options);
+
+    function togglePhysics() {
+      physicsEnabled = !physicsEnabled;
+      network.setOptions({ physics: { enabled: physicsEnabled } });
+    }
+
+    function stabilizeAndStop() {
+      network.setOptions({ physics: { enabled: false } });
+      physicsEnabled = false;
+    }
+  </script>
+</body>
+</html>
