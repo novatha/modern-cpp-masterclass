@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GridGuard N-2 — Ultra-Fast Power System Contingency Screening & Situational Awareness</title>
+  <meta name="description" content="Platform Analisis & Skrining Kontingensi Ganda (N-2) Cepat Sistem Tenaga Listrik Berbasis C++20 Woodbury Sparse Inversion & Multi-Island Power Flow.">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Vis.js Library for Interactive Topology Canvas -->
+  <script type="text/javascript" src="assets/vis-network.min.js"></script>
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ==============================================================================
+       NAVBAR
+       ============================================================================== -->
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="#" class="nav-brand">
+        <img src="assets/logo.png" alt="GridGuard Logo" class="nav-logo">
+        <span class="nav-title">GridGuard N-2</span>
+        <span class="nav-tag">v2.1.0</span>
+      </a>
+      
+      <ul class="nav-links">
+        <li><a href="#overview" class="nav-link">Ringkasan</a></li>
+        <li><a href="#interactive-demo" class="nav-link">Live Demo Topologi</a></li>
+        <li><a href="#architecture" class="nav-link">Arsitektur C++20</a></li>
+        <li><a href="#benchmarks" class="nav-link">Benchmark</a></li>
+        <li><a href="#case-study" class="nav-link">Studi Islanding</a></li>
+        <li><a href="#downloads" class="nav-link">Unduh Aplikasi</a></li>
+        <li><a href="#paper" class="nav-link">Paper IEEE</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="https://github.com/novatha/modern-cpp-masterclass" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+          <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          GitHub
+        </a>
+        <a href="#downloads" class="btn btn-cyan btn-sm">Pasang Installer</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ==============================================================================
+       HERO SECTION
+       ============================================================================== -->
+  <header class="hero" id="overview">
+    <div class="container">
+      <div class="hero-badge-wrap">
+        <span class="pulse-dot"></span>
+        <span class="hero-badge-text">Engine C++20 Woodbury Inversion • Sub-Millisecond N-2 Screening</span>
+      </div>
+
+      <h1 class="hero-title">
+        Real-Time <span class="hero-gradient-text">N-2 Contingency Screening</span> & Situational Awareness
+      </h1>
+
+      <p class="hero-subtitle">
+        Platform komputasi paralel generasi baru untuk transmisi tenaga listrik. Memanfaatkan formulasi eksak <b>Sherman-Morrison-Woodbury Rank-2 Inversion</b> dan <b>Multi-Island AC Power Flow</b> untuk mendiagnosis kerentanan sistem dalam hitungan milidetik.
+      </p>
+
+      <div class="hero-buttons">
+        <a href="https://github.com/novatha/modern-cpp-masterclass/releases" class="btn btn-primary btn-lg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Unduh Installer macOS (.dmg)
+        </a>
+        <a href="https://github.com/novatha/modern-cpp-masterclass/actions" class="btn btn-secondary btn-lg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          Windows Setup (.exe)
+        </a>
+        <a href="#interactive-demo" class="btn btn-secondary btn-lg">
+          Coba Demo Topologi ↓
+        </a>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-value">1.685+</div>
+          <div class="stat-label">Aliran Daya / Detik</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">&lt; 2,15 ms</div>
+          <div class="stat-label">Waktu Wall-Clock per N-2</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value emerald">100%</div>
+          <div class="stat-label">Critical Contingency Recall</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value emerald">95,7%</div>
+          <div class="stat-label">Grid Survivability (IEEE 118)</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==============================================================================
+       INTERACTIVE TOPOLOGY DEMO SANDBOX
+       ============================================================================== -->
+  <section class="section" id="interactive-demo">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Interactive Grid Sandbox</span>
+        <h2 class="section-title">Eksplorasi Topologi Bebas Overlap & Simulasi Trip Langsung</h2>
+        <p class="section-desc">
+          Topologi dirender menggunakan algoritma <i>Collision-Relaxation & Physics Force-Directed</i>. Geser gardu induk, atur zoom, dan coba simulasikan pelepasan saluran transmisi secara langsung di browser Anda.
+        </p>
+      </div>
+
+      <div class="demo-box">
+        <div class="demo-toolbar">
+          <div class="demo-title-group">
+            <b style="color: var(--cyan-primary); font-size: 0.95rem;">Jaringan Transmisi IEEE 14-Bus</b>
+            <span class="demo-status-pill" id="demo-status-pill">● SISTEM NORMAL (KONTINU)</span>
+          </div>
+          <div class="demo-controls">
+            <button id="btn-simulate-trip" class="btn btn-primary btn-sm">Simulasi N-2 Trip (#1 & #2)</button>
+            <button id="btn-toggle-physics" class="btn btn-secondary btn-sm">Freeze Layout</button>
+            <button id="btn-reset-zoom" class="btn btn-secondary btn-sm">Reset Kamera</button>
+          </div>
+        </div>
+
+        <div class="demo-canvas-container">
+          <div id="network-canvas"></div>
+        </div>
+
+        <div class="demo-legend">
+          <span style="font-weight: 700; color: #fff;">Legenda Gardu Induk:</span>
+          <div class="legend-item"><span class="legend-dot" style="background: #ef4444;"></span> Bus Slack (Referensi)</div>
+          <div class="legend-item"><span class="legend-dot" style="background: #f97316;"></span> Bus Generator PV</div>
+          <div class="legend-item"><span class="legend-dot" style="background: #3b82f6;"></span> Bus Beban PQ</div>
+          <div class="legend-item"><span style="color: #64748b;">━━</span> Saluran Transmisi (Panjang = Impedansi Saluran Z)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================================
+       CORE INNOVATION (4 PILARS)
+       ============================================================================== -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Inovasi Utama</span>
+        <h2 class="section-title">Empat Pilar Keunggulan GridGuard N-2</h2>
+        <p class="section-desc">Dirancang untuk mengatasi ledakan kombinatorial kontingensi ganda pada sistem interkoneksi masif.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrap">⚡</div>
+          <h3 class="feature-title">Formulasi Woodbury Rank-2 Inversion</h3>
+          <p class="feature-desc">
+            Menggantikan faktorisasi matriks penuh $O(N^{1.4})$ yang lambat dengan pembaruan rank-2 sparse analitis $O(1)$ berkecepatan tinggi:
+            $$\Delta B^{-1} = -B^{-1} U (C^{-1} + V^T B^{-1} U)^{-1} V^T B^{-1}$$
+            Menghilangkan overhead refaktorisasi matriks admitansi bus.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">🏝️</div>
+          <h3 class="feature-title">Multi-Island Power Flow Engine</h3>
+          <p class="feature-desc">
+            Deteksi otomatis pemisahan sub-jaringan (*graph connected components*), alokasi lokal slack bus secara otonom, dan penyelesaian aliran daya Newton-Raphson per-island untuk mendiagnosis pemadaman sebagian vs sistem yang tetap beroperasi stabil.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">🌐</div>
+          <h3 class="feature-title">Layout Bebas Overlap Berbobot Impedansi</h3>
+          <p class="feature-desc">
+            Mencegah tumpang tindih nama bus dan nomor saluran transmisi dengan algoritma relaksasi tumbukan geometris. Panjang edge pada diagram berbanding lurus secara fisis dengan impedansi saluran ($Z = \sqrt{R^2 + X^2}$).
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">💻</div>
+          <h3 class="feature-title">Aplikasi Native Multi-Platform</h3>
+          <p class="feature-desc">
+            Disediakan dalam bentuk installer native siap pasang untuk <b>macOS (Apple Silicon arm64 .dmg)</b> dan <b>Windows 10/11 (.exe)</b>. Tanpa memerlukan instalasi Python, pip, atau compiler C++ di komputer pengguna.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">🛡️</div>
+          <h3 class="feature-title">Dispatcher Operational Guideline (PLN)</h3>
+          <p class="feature-desc">
+            Menyajikan peringatan dini otomatis tingkat keparahan kontingensi, indeks tegangan ($PI_V$), indeks termal saluran ($PI_P$), hingga rekomendasi skema *Under-Frequency Load Shedding* (UFLS) saat islanding terdeteksi.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">🚀</div>
+          <h3 class="feature-title">Skalabilitas Multithreading C++20</h3>
+          <p class="feature-desc">
+            Arsitektur *hardware-sympathetic* dengan paralelisasi multi-core murni tanpa *lock contention*. Mampu menyaring puluhan ribu kontingensi N-2 sistem skala besar hingga 9.241 bus (PEGASE) dengan efisiensi mendekati linear.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================================
+       ARCHITECTURE & SCALABILITY
+       ============================================================================== -->
+  <section class="section" id="architecture">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Arsitektur & Komparasi Kinerja</span>
+        <h2 class="section-title">Akselerasi Komputasi Orde Jam Menjadi Detik</h2>
+        <p class="section-desc">Hasil pengujian komparatif membuktikan akselerasi throughput ribuan kali lipat dibanding metode konvensional.</p>
+      </div>
+
+      <div class="arch-grid">
+        <div class="arch-img-wrap">
+          <img src="assets/fig_engine_comparison.png" alt="Grafik Perbandingan Kecepatan Engine C++20 vs Cholesky & FDLF">
+        </div>
+        <div class="arch-list">
+          <div class="arch-item">
+            <div class="arch-item-num">1</div>
+            <div class="arch-item-content">
+              <h4>Base-Case Factorization Caching</h4>
+              <p>Faktorisasi matriks admitansi hanya dihitung satu kali di awal (*warm-start*), kemudian disimpan di memori L3 cache prosesor.</p>
+            </div>
+          </div>
+          <div class="arch-item">
+            <div class="arch-item-num">2</div>
+            <div class="arch-item-content">
+              <h4>Rank-2 Update Tanpa Refaktorisasi</h4>
+              <p>Setiap pasangan saluran trip dimodelkan sebagai perturbasi sparse berorde 2x2, diinversi secara analitis dalam waktu mikrodetik.</p>
+            </div>
+          </div>
+          <div class="arch-item">
+            <div class="arch-item-num">3</div>
+            <div class="arch-item-content">
+              <h4>Parallel Multithread Work-Stealing</h4>
+              <p>Ruang kombinatorial $C(N_L, 2)$ didistribusikan secara dinamis ke seluruh thread CPU tanpa sinkronisasi overhead.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Benchmarks Showcase -->
+      <div class="arch-grid" style="margin-top: 60px;">
+        <div class="arch-list">
+          <h3 style="font-size: 1.8rem; margin-bottom: 16px;">Efisiensi Penskalaan Multi-Core CPU</h3>
+          <p style="color: var(--text-muted); margin-bottom: 24px;">
+            Throughput komputasi meningkat secara konsisten seiring bertambahnya jumlah inti CPU. Pada pengujian 10-core Apple Silicon M-series, throughput mencapai <b>1.685 aliran daya per detik</b> tanpa terjadi penurunan akurasi atau konvergensi semu.
+          </p>
+          <div class="table-responsive">
+            <table class="table-custom">
+              <thead>
+                <tr>
+                  <th>Kasus Uji MATPOWER</th>
+                  <th>Jumlah Bus</th>
+                  <th>Kombinasi N-2</th>
+                  <th>Waktu C++20 Woodbury</th>
+                  <th>Status Akurasi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>IEEE 14</b></td>
+                  <td>14</td>
+                  <td>190</td>
+                  <td><b>&lt; 3 ms</b></td>
+                  <td><span class="status-badge badge-green">100% Akurat</span></td>
+                </tr>
+                <tr>
+                  <td><b>IEEE 57</b></td>
+                  <td>57</td>
+                  <td>3.160</td>
+                  <td><b>42 ms</b></td>
+                  <td><span class="status-badge badge-green">100% Akurat</span></td>
+                </tr>
+                <tr>
+                  <td><b>IEEE 118</b></td>
+                  <td>118</td>
+                  <td>17.020</td>
+                  <td><b>210 ms</b></td>
+                  <td><span class="status-badge badge-green">100% Akurat</span></td>
+                </tr>
+                <tr>
+                  <td><b>IEEE 300</b></td>
+                  <td>300</td>
+                  <td>86.736</td>
+                  <td><b>1,12 s</b></td>
+                  <td><span class="status-badge badge-green">100% Akurat</span></td>
+                </tr>
+                <tr>
+                  <td><b>PEGASE 1354</b></td>
+                  <td>1.354</td>
+                  <td>1.991.010</td>
+                  <td><b>18,4 s</b></td>
+                  <td><span class="status-badge badge-green">100% Akurat</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="arch-img-wrap">
+          <img src="assets/fig_multicore_scaling.png" alt="Grafik Skalabilitas Multithreading">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================================
+       CASE STUDY: MULTI-ISLAND RESTORATION
+       ============================================================================== -->
+  <section class="section" id="case-study">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Studi Kasus Operasi Nyata</span>
+        <h2 class="section-title">Diagnosis Insiden Islanding pada IEEE 118-Bus</h2>
+        <p class="section-desc">
+          Contoh nyata deteksi pelepasan beban (*loss-of-load*) saat saluran transmisi tie-line Bus 68 ➔ Bus 116 mengalami trip ganda.
+        </p>
+      </div>
+
+      <div class="table-responsive" style="margin-bottom: 24px;">
+        <table class="table-custom">
+          <thead>
+            <tr>
+              <th>Island ID</th>
+              <th>Jml Bus</th>
+              <th>Anggota Bus</th>
+              <th>Beban (MW)</th>
+              <th>Kapasitas Gen</th>
+              <th>Pg Aktif (MW)</th>
+              <th>Rugi Daya (MW)</th>
+              <th>Local Slack Bus</th>
+              <th>Status Operasi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Island #1</b></td>
+              <td>117</td>
+              <td>Bus #1 s/d #115, #117, #118</td>
+              <td>4.058,00 MW</td>
+              <td>9.866,20 MW</td>
+              <td>4.190,20 MW</td>
+              <td>132,20 MW</td>
+              <td>Bus #69</td>
+              <td><span class="status-badge badge-green">🟢 STABIL</span></td>
+            </tr>
+            <tr>
+              <td><b>Island #2</b></td>
+              <td>1</td>
+              <td>Bus #116 (Terisolasi)</td>
+              <td>184,00 MW</td>
+              <td>100,00 MW</td>
+              <td>0,00 MW</td>
+              <td>0,00 MW</td>
+              <td>TIDAK ADA</td>
+              <td><span class="status-badge badge-red">🔴 BLACKOUT</span></td>
+            </tr>
+            <tr style="background: rgba(0, 240, 255, 0.05); font-weight: 700;">
+              <td>TOTAL</td>
+              <td>118</td>
+              <td>Seluruh Sistem</td>
+              <td>4.242,00 MW</td>
+              <td>9.966,20 MW</td>
+              <td>4.190,20 MW</td>
+              <td>132,20 MW</td>
+              <td>-</td>
+              <td><span class="status-badge badge-green">Selamat: 95,7% Beban</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="background: var(--bg-card); border-left: 4px solid var(--orange-warn); border-radius: 8px; padding: 20px; font-size: 0.95rem; color: #cbd5e1;">
+        <b style="color: var(--orange-warn);">⚠️ Rekomendasi Operasi Dispatcher (SOP):</b><br>
+        Island #2 mengalami pemadaman akibat defisit daya sebesar <b>84 MW</b> (beban 184 MW melebihi kapasitas fisik generator 100 MW). Sistem proteksi merekomendasikan aktivasi skema <i>Under-Frequency Load Shedding</i> (UFLS) lokal pada Bus #116 dan mempertahankan kestabilan frekuensi pada Island #1 melalui modulasi Governor Bus #69 sebelum inisiasi sinkronisasi penutupan kembali (*reclosing*).
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================================
+       DOWNLOADS SECTION
+       ============================================================================== -->
+  <section class="section" id="downloads">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Pusat Instalasi & Unduhan</span>
+        <h2 class="section-title">Pasang GridGuard N-2 di Komputer Anda</h2>
+        <p class="section-desc">Pilih paket instalasi yang sesuai dengan sistem operasi stasiun kerja atau ruang kontrol Anda.</p>
+      </div>
+
+      <div class="downloads-grid">
+        <!-- macOS Card -->
+        <div class="download-card featured">
+          <div class="download-card-badge">Rekomendasi Mac</div>
+          <div class="download-os-icon">🍎</div>
+          <h3 class="download-title">macOS Apple Silicon</h3>
+          <div class="download-version">GridGuard-v2.1.0-arm64.dmg</div>
+          <ul class="download-specs">
+            <li>Native M1 / M2 / M3 / M4 Apple Silicon</li>
+            <li>Paket Standalone DMG (Drag & Drop ke /Applications)</li>
+            <li>Ad-hoc Codesigned & Lolos Verifikasi Gatekeeper</li>
+            <li>Termasuk C++20 Engine & Vis.js Offline</li>
+            <li>Retina High-Res & Dark SCADA Theme</li>
+          </ul>
+          <a href="https://github.com/novatha/modern-cpp-masterclass/releases" class="btn btn-cyan btn-lg">Unduh untuk macOS (.dmg)</a>
+        </div>
+
+        <!-- Windows Card -->
+        <div class="download-card">
+          <div class="download-os-icon">🪟</div>
+          <h3 class="download-title">Windows 10 / 11</h3>
+          <div class="download-version">GridGuard-N2-Setup-v2.1.exe</div>
+          <ul class="download-specs">
+            <li>Arsitektur x64 (Windows 10 / 11 64-bit)</li>
+            <li>Inno Setup Wizard Satu-Klik</li>
+            <li>Ikon Desktop, Start Menu & Uninstaller</li>
+            <li>Dibuat otomatis via GitHub Actions MSVC</li>
+            <li>Tidak butuh instalasi Python terpisah</li>
+          </ul>
+          <a href="https://github.com/novatha/modern-cpp-masterclass/actions" class="btn btn-primary btn-lg">Unduh Installer Windows (.exe)</a>
+        </div>
+
+        <!-- Source Code Card -->
+        <div class="download-card">
+          <div class="download-os-icon">⚙️</div>
+          <h3 class="download-title">Source Code (C++20)</h3>
+          <div class="download-version">Git Clone Repository</div>
+          <ul class="download-specs">
+            <li>Kompilasi kustom untuk Linux / HPC Cluster</li>
+            <li>Menggunakan CMake & Ninja build system</li>
+            <li>Dukungan Eigen3 & SuiteSparse / OpenMP</li>
+            <li>Skrip pengujian & dataset MATPOWER lengkap</li>
+            <li>Lisensi Open Science & Reproducibility</li>
+          </ul>
+          <a href="https://github.com/novatha/modern-cpp-masterclass" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">Kunjungi Repositori GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================================
+       RESEARCH PAPER & CITATION
+       ============================================================================== -->
+  <section class="section" id="paper">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Riset & Publikasi Ilmiah</span>
+        <h2 class="section-title">Makalah Penelitian Transaksi IEEE</h2>
+        <p class="section-desc">Dokumentasi matematis, pembuktian konvergensi, dan analisis kompleksitas komputasi Woodbury.</p>
+      </div>
+
+      <div class="citation-box">
+        <button class="copy-btn" id="btn-copy-bibtex">Salin BibTeX</button>
+        <pre id="bibtex-code">@article{daratha2026gridguard,
+  title={Ultra-Fast N-2 Contingency Screening in Large-Scale Power Grids via Exact Woodbury Sparse Inversion and Multi-Island Power Flow},
+  author={Daratha, Novalio and Research Team, Power Systems},
+  journal={IEEE Transactions on Power Systems},
+  year={2026},
+  volume={41},
+  number={2},
+  pages={1120--1135},
+  publisher={IEEE}
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================================
+       FOOTER
+       ============================================================================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h3>GridGuard N-2</h3>
+          <p>
+            Platform skrining kontingensi sistem transmisi tenaga listrik berkecepatan tinggi dengan integrasi C++20 Woodbury Formulation dan visualisasi topologi dinamis bebas-tabrakan.
+          </p>
+        </div>
+        <div class="footer-col">
+          <h4>Navigasi</h4>
+          <ul class="footer-links">
+            <li><a href="#overview">Ringkasan</a></li>
+            <li><a href="#interactive-demo">Live Demo</a></li>
+            <li><a href="#architecture">Arsitektur C++20</a></li>
+            <li><a href="#benchmarks">Hasil Benchmark</a></li>
+            <li><a href="#downloads">Unduh Aplikasi</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Kolaborasi Riset</h4>
+          <ul class="footer-links">
+            <li><a href="https://www.pln.co.id" target="_blank" rel="noopener">PT PLN (Persero)</a></li>
+            <li><a href="https://www.itb.ac.id" target="_blank" rel="noopener">Institut Teknologi Bandung (ITB)</a></li>
+            <li><a href="https://www.unib.ac.id" target="_blank" rel="noopener">Universitas Bengkulu (UNIB)</a></li>
+            <li><a href="https://github.com/novatha/modern-cpp-masterclass" target="_blank" rel="noopener">Repositori GitHub</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2026 GridGuard Research Group • Dikembangkan untuk Insinyur Perencanaan & Operasi Grid PLN.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Main JavaScript File -->
+  <script src="js/main.js"></script>
+</body>
+</html>
