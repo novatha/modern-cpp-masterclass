@@ -13,8 +13,17 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - { name: "Clang 18", cc: clang-18, cxx: clang++-18 }
-          - { name: "GCC 13", cc: gcc-13, cxx: g++-13 }
+          # Clang 18 defines __cpp_concepts=201907L, so libstdc++-13's
+          # <expected> (guard: __cpp_concepts >= 202002L) stays hidden.
+          # The Clang job therefore uses libc++ — same toolchain the README
+          # documents for Ubuntu — giving us two stdlibs across the matrix.
+          - { name: "Clang 18", cc: clang-18, cxx: clang++-18, cxxflags: "-stdlib=libc++", ldflags: "-stdlib=libc++" }
+          - { name: "GCC 13", cc: gcc-13, cxx: g++-13, cxxflags: "", ldflags: "" }
+    env:
+      CC: ${{ matrix.config.cc }}
+      CXX: ${{ matrix.config.cxx }}
+      CXXFLAGS: ${{ matrix.config.cxxflags }}
+      LDFLAGS: ${{ matrix.config.ldflags }}
 
     steps:
       - name: Checkout
@@ -23,13 +32,10 @@ jobs:
       - name: Install dependencies (Ubuntu)
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake ${{ matrix.config.cc }} ${{ matrix.config.cxx }} lldb
+          sudo apt-get install -y ninja-build cmake ${{ matrix.config.cc }} ${{ matrix.config.cxx }} lldb libc++-18-dev libc++abi-18-dev
 
       - name: Configure (Release)
         run: cmake --preset=release
-        env:
-          CC: ${{ matrix.config.cc }}
-          CXX: ${{ matrix.config.cxx }}
 
       - name: Build
         run: ninja -C build
