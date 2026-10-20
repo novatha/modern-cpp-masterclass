@@ -18,6 +18,7 @@ if getattr(sys, 'frozen', False):
         base_candidates.append(Path(sys._MEIPASS).resolve())
     exec_dir = Path(sys.executable).resolve().parent
     base_candidates.append(exec_dir)
+    base_candidates.append(exec_dir / "_internal")
     base_candidates.append(exec_dir.parent / "Resources")
     
     PROJECT_ROOT = base_candidates[0]
@@ -25,11 +26,13 @@ if getattr(sys, 'frozen', False):
         if (c / "data").exists() or (c / "assets").exists():
             PROJECT_ROOT = c
             break
+    for c in base_candidates:
+        if str(c) not in sys.path:
+            sys.path.insert(0, str(c))
 else:
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -136,13 +139,16 @@ class SimulationWorker(QThread):
         self.log_signal.emit(f"🚀 Menjalankan C++20 Woodbury Engine:\n{' '.join(cmd)}\n")
 
         try:
-            self.process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1
-            )
+            popen_kwargs = {
+                "stdout": subprocess.PIPE,
+                "stderr": subprocess.STDOUT,
+                "text": True,
+                "bufsize": 1
+            }
+            if sys.platform.startswith("win"):
+                popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+
+            self.process = subprocess.Popen(cmd, **popen_kwargs)
 
             for line in iter(self.process.stdout.readline, ''):
                 if not self.is_running:
@@ -182,32 +188,93 @@ class GridGuardMainWindow(QMainWindow):
         self.setMinimumSize(1080, 720)
 
         self.project_root = PROJECT_ROOT
-        self.binary_path = self.project_root / "build" / "contingency_n2_woodbury"
-        if not self.binary_path.exists():
-            alt_bin = self.project_root / "contingency_n2_woodbury"
-            if alt_bin.exists():
-                self.binary_path = alt_bin
-            else:
-                exec_dir = Path(sys.executable).resolve().parent
-                if (exec_dir / "build" / "contingency_n2_woodbury").exists():
-                    self.binary_path = exec_dir / "build" / "contingency_n2_woodbury"
-                elif (exec_dir / "contingency_n2_woodbury").exists():
-                    self.binary_path = exec_dir / "contingency_n2_woodbury"
+        exec_dir = Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False) else self.project_root
 
-        if self.binary_path.exists() and not os.access(self.binary_path, os.X_OK):
-            try:
-                os.chmod(self.binary_path, 0o755)
-            except Exception:
-                pass
+        # 1. Tentukan direktori data (berisi berkas MATPOWER case .m)
+        self.data_dir = self.project_root / "data"
+        data_candidates = [
+            self.project_root / "data",
+            exec_dir / "data",
+            exec_dir / "_internal" / "data",
+            (Path(sys._MEIPASS).resolve() / "data") if hasattr(sys, '_MEIPASS') else None,
+        ]
+        for dc in data_candidates:
+            if dc and dc.is_dir() and ((dc / "case14.m").exists() or (dc / "case57.m").exists()):
+                self.data_dir = dc
+                break
 
-        self.current_case_path = self.project_root / "data" / "case14.m"
-        if not self.current_case_path.exists():
-            self.current_case_path = self.project_root / "data" / "case57.m"
+        # 2. Tentukan direktori assets
+        self.assets_dir = self.project_root / "assets"
+        assets_candidates = [
+            self.project_root / "assets",
+            exec_dir / "assets",
+            exec_dir / "_internal" / "assets",
+            (Path(sys._MEIPASS).resolve() / "assets") if hasattr(sys, '_MEIPASS') else None,
+        ]
+        for ac in assets_candidates:
+            if ac and ac.is_dir():
+                self.assets_dir = ac
+                break
+
+        # 3. Temukan executable mesin komputasi C++20 Woodbury Engine
+        # Di Windows: contingency_n2_woodbury.exe; Di macOS/Linux: contingency_n2_woodbury
+        bin_names = (
+            ["contingency_n2_woodbury.exe", "contingency_n2_woodbury"]
+            if sys.platform.startswith("win")
+            else ["contingency_n2_woodbury", "contingency_n2_woodbury.exe"]
+        )
+
+        search_dirs = [
+            self.project_root / "build",
+            self.project_root / "build" / "Release",
+            self.project_root,
+            exec_dir / "build",
+            exec_dir / "build" / "Release",
+            exec_dir,
+            exec_dir / "_internal" / "build",
+            exec_dir / "_internal" / "build" / "Release",
+            exec_dir / "_internal",
+        ]
+        if hasattr(sys, '_MEIPASS'):
+            meipass = Path(sys._MEIPASS).resolve()
+            search_dirs.extend([
+                meipass / "build",
+                meipass / "build" / "Release",
+                meipass,
+            ])
+
+        self.binary_path = None
+        for sdir in search_dirs:
+            for bname in bin_names:
+                cand = sdir / bname
+                if cand.is_file() and cand.exists():
+                    self.binary_path = cand
+                    break
+            if self.binary_path:
+                break
+
+        if not self.binary_path:
+            self.binary_path = self.project_root / "build" / bin_names[0]
+
+        if self.binary_path.exists() and not sys.platform.startswith("win"):
+            if not os.access(self.binary_path, os.X_OK):
+                try:
+                    os.chmod(self.binary_path, 0o755)
+                except Exception:
+                    pass
+
+        # 4. Berkas case awal
+        self.current_case_path = self.data_dir / "case14.m"
+        for cname in ["case14.m", "case57.m", "case118.m", "case30.m", "case300.m"]:
+            cand = self.data_dir / cname
+            if cand.exists():
+                self.current_case_path = cand
+                break
 
         self.current_results = None
         self.worker = None
-        self.current_topo_img_path = self.project_root / "assets" / f"topology_{self.current_case_path.stem}_impedance.png"
-        self.current_topo_html_path = self.project_root / "assets" / f"topology_{self.current_case_path.stem}_interactive.html"
+        self.current_topo_img_path = self.assets_dir / f"topology_{self.current_case_path.stem}_impedance.png"
+        self.current_topo_html_path = self.assets_dir / f"topology_{self.current_case_path.stem}_interactive.html"
 
         self.setup_ui()
         self.apply_high_contrast_theme()
@@ -775,15 +842,15 @@ class GridGuardMainWindow(QMainWindow):
         """)
 
     def browse_file(self):
-        start_dir = str(self.project_root / "data")
+        start_dir = str(self.data_dir) if self.data_dir.exists() else str(self.project_root / "data")
         fpath, _ = QFileDialog.getOpenFileName(
             self, "Pilih Berkas MATPOWER Case", start_dir, "MATPOWER Case (*.m)"
         )
         if fpath:
             self.current_case_path = Path(fpath)
             self.lbl_case_name.setText(f"Berkas: {self.current_case_path.name}")
-            expected_img = self.project_root / "assets" / f"topology_{self.current_case_path.stem}_impedance.png"
-            expected_html = self.project_root / "assets" / f"topology_{self.current_case_path.stem}_interactive.html"
+            expected_img = self.assets_dir / f"topology_{self.current_case_path.stem}_impedance.png"
+            expected_html = self.assets_dir / f"topology_{self.current_case_path.stem}_interactive.html"
             self.current_topo_img_path = expected_img
             self.current_topo_html_path = expected_html
             if expected_img.exists() and expected_html.exists():
@@ -792,23 +859,32 @@ class GridGuardMainWindow(QMainWindow):
                 self.generate_and_show_topology()
 
     def generate_and_show_topology(self):
-        assets_dir = self.project_root / "assets"
+        assets_dir = self.assets_dir
         try:
             assets_dir.mkdir(parents=True, exist_ok=True)
             test_file = assets_dir / f".test_write_{os.getpid()}"
             test_file.touch()
             test_file.unlink(missing_ok=True)
+            writable_cache = assets_dir
         except Exception:
-            assets_dir = Path.home() / "Library" / "Caches" / "GridGuard" / "assets"
-            assets_dir.mkdir(parents=True, exist_ok=True)
+            if sys.platform.startswith("win"):
+                local_app_data = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+                writable_cache = Path(local_app_data) / "GridGuard" / "assets"
+            elif sys.platform == "darwin":
+                writable_cache = Path.home() / "Library" / "Caches" / "GridGuard" / "assets"
+            else:
+                writable_cache = Path.home() / ".cache" / "GridGuard" / "assets"
+            writable_cache.mkdir(parents=True, exist_ok=True)
 
-        out_img = assets_dir / f"topology_{self.current_case_path.stem}_impedance.png"
-        out_html = assets_dir / f"topology_{self.current_case_path.stem}_interactive.html"
+        out_img = writable_cache / f"topology_{self.current_case_path.stem}_impedance.png"
+        out_html = writable_cache / f"topology_{self.current_case_path.stem}_interactive.html"
         self.lbl_topo_info.setText("⏳ Sedang menghitung layout bebas overlap (Collision-Relaxation & Physics)...")
         QApplication.processEvents()
 
         try:
-            sys.path.insert(0, str(self.project_root))
+            for p in [str(self.project_root), str(self.project_root.parent)]:
+                if p not in sys.path:
+                    sys.path.insert(0, p)
             from scripts.plot_network_topology import plot_topology_impedance, export_interactive_html
             plot_topology_impedance(str(self.current_case_path), str(out_img))
             export_interactive_html(str(self.current_case_path), str(out_html))
@@ -872,12 +948,14 @@ class GridGuardMainWindow(QMainWindow):
     def open_external_topology(self):
         target_html = getattr(self, "current_topo_html_path", None)
         if not target_html or not Path(target_html).exists():
-            target_html = self.project_root / "assets" / f"topology_{self.current_case_path.stem}_interactive.html"
+            target_html = self.assets_dir / f"topology_{self.current_case_path.stem}_interactive.html"
 
         if Path(target_html).exists():
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(target_html)))
         else:
             target_img = getattr(self, "current_topo_img_path", None)
+            if not target_img or not Path(target_img).exists():
+                target_img = self.assets_dir / f"topology_{self.current_case_path.stem}_impedance.png"
             if target_img and Path(target_img).exists():
                 if sys.platform == "darwin":
                     subprocess.Popen(["open", str(target_img)])
@@ -889,11 +967,23 @@ class GridGuardMainWindow(QMainWindow):
                 self.generate_and_show_topology()
 
     def start_simulation(self):
-        if not self.binary_path.exists():
-            QMessageBox.critical(self, "Error", f"Executable C++ tidak ditemukan di: {self.binary_path}")
+        if not self.binary_path or not self.binary_path.exists():
+            QMessageBox.critical(
+                self,
+                "Executable C++ Tidak Ditemukan",
+                f"Executable C++20 Woodbury Engine tidak ditemukan.\n"
+                f"Lokasi pencarian terakhir: {self.binary_path}\n\n"
+                f"Pastikan berkas contingency_n2_woodbury.exe (Windows) atau contingency_n2_woodbury (macOS/Linux) "
+                f"telah terpasang dengan benar."
+            )
             return
-        if not self.current_case_path.exists():
-            QMessageBox.critical(self, "Error", f"Berkas grid tidak ditemukan: {self.current_case_path}")
+        if not self.current_case_path or not self.current_case_path.exists():
+            QMessageBox.critical(
+                self,
+                "Berkas Kasus Grid Tidak Ditemukan",
+                f"Berkas jaringan MATPOWER tidak ditemukan di:\n{self.current_case_path}\n\n"
+                f"Silakan gunakan tombol '📁 Pilih Kasus Grid (.m)' untuk memilih berkas sistem transmisi."
+            )
             return
 
         self.btn_run.setEnabled(False)

@@ -1,6 +1,6 @@
 ; Script Inno Setup untuk GridGuard N-2
 #define MyAppName "GridGuard N-2"
-#define MyAppVersion "2.1.0"
+#define MyAppVersion "2.1.1"
 #define MyAppPublisher "PT PLN (Persero) / ITB & UNIB Power Systems Research"
 #define MyAppURL "https://github.com/novatha/modern-cpp-masterclass"
 #define MyAppExeName "GridGuard.exe"
@@ -16,7 +16,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\GridGuard N-2
 DisableProgramGroupPage=yes
 OutputDir=dist
-OutputBaseFilename=GridGuard-N2-Windows-Setup-v2.1
+OutputBaseFilename=GridGuard-N2-Windows-Setup-v2.1.1
 SetupIconFile=assets\AppIcon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -30,6 +30,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "dist\GridGuard\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\AppIcon.ico"

@@ -10,6 +10,8 @@ on:
       - 'include/**'
       - 'scripts/**'
       - 'CMakeLists.txt'
+      - 'GridGuard_win.spec'
+      - 'installer_windows.iss'
       - '.github/workflows/build-windows.yml'
 
 jobs:
@@ -38,9 +40,30 @@ jobs:
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release --target contingency_n2_woodbury
 
+      - name: Copy binary to build root
+        shell: pwsh
+        run: |
+          if (Test-Path "build\Release\contingency_n2_woodbury.exe") {
+              Copy-Item "build\Release\contingency_n2_woodbury.exe" -Destination "build\contingency_n2_woodbury.exe" -Force
+          }
+
       - name: Build Application with PyInstaller
         run: |
           pyinstaller --noconfirm --clean GridGuard_win.spec
+
+      - name: Ensure Extra Files in dist
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse -Force "data" "dist\GridGuard\data"
+          Copy-Item -Recurse -Force "assets" "dist\GridGuard\assets"
+          New-Item -ItemType Directory -Force -Path "dist\GridGuard\build"
+          if (Test-Path "build\Release\contingency_n2_woodbury.exe") {
+              Copy-Item "build\Release\contingency_n2_woodbury.exe" "dist\GridGuard\build\contingency_n2_woodbury.exe" -Force
+              Copy-Item "build\Release\contingency_n2_woodbury.exe" "dist\GridGuard\contingency_n2_woodbury.exe" -Force
+          } elseif (Test-Path "build\contingency_n2_woodbury.exe") {
+              Copy-Item "build\contingency_n2_woodbury.exe" "dist\GridGuard\build\contingency_n2_woodbury.exe" -Force
+              Copy-Item "build\contingency_n2_woodbury.exe" "dist\GridGuard\contingency_n2_woodbury.exe" -Force
+          }
 
       - name: Install Inno Setup
         run: |
@@ -54,5 +77,5 @@ jobs:
       - name: Upload Windows Installer (.exe)
         uses: actions/upload-artifact@v4
         with:
-          name: GridGuard-N2-Windows-Setup-v2.1
-          path: dist/GridGuard-N2-Windows-Setup-v2.1.exe
+          name: GridGuard-N2-Windows-Setup-v2.1.1
+          path: dist/GridGuard-N2-Windows-Setup-v2.1.1.exe

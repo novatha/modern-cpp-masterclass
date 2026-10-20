@@ -22,6 +22,7 @@ for cand in [
 ]:
     if cand.exists():
         binaries.append((str(cand), 'build'))
+        binaries.append((str(cand), '.'))
         break
 
 hiddenimports = [
