@@ -3,6 +3,8 @@ build/
 _build/
 out/
 bin/
+target/
+rust/target/
 
 # CMake
 CMakeCache.txt
