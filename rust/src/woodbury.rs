@@ -1,19 +1,39 @@
-use faer::linalg::solvers::Ldlt;
 use faer::prelude::Solve;
-use faer::Mat;
+use faer::sparse::linalg::solvers::{Llt, Lu};
+use faer::sparse::{SparseColMat, Triplet};
+use faer::{Mat, Side};
 
 use crate::grid::{ContingencyResult, ContingencyStatus, GridModel};
 use crate::islanding::check_islanding;
 use std::time::Instant;
 
+/// Robust sparse linear solver supporting Cholesky (LL^T) with LU fallback
+#[derive(Debug, Clone)]
+pub enum SparseLinearSolver {
+    Cholesky(Llt<usize, f64>),
+    Lu(Lu<usize, f64>),
+}
+
+impl SparseLinearSolver {
+    #[inline]
+    pub fn solve(&self, rhs: &Mat<f64>) -> Mat<f64> {
+        match self {
+            Self::Cholesky(chol) => chol.solve(rhs),
+            Self::Lu(lu) => lu.solve(rhs),
+        }
+    }
+}
+
 /// Pre-factored base susceptance matrices (B' and B'')
 pub struct BaseFactors {
-    pub bp_solver: Ldlt<f64>,
-    pub bpp_solver: Ldlt<f64>,
+    pub bp_solver: SparseLinearSolver,
+    pub bpp_solver: Option<SparseLinearSolver>,
     pub non_ref_buses: Vec<usize>,
     pub non_ref_map: Vec<Option<usize>>, // bus index -> non_ref index
     pub pq_buses: Vec<usize>,
     pub pq_map: Vec<Option<usize>>,      // bus index -> pq index
+    pub p_spec: Vec<f64>,
+    pub q_spec: Vec<f64>,
 }
 
 impl BaseFactors {
@@ -29,7 +49,13 @@ impl BaseFactors {
         let mut pq_map = vec![None; n];
         let mut pq_count = 0;
 
+        let mut p_spec = vec![0.0f64; n];
+        let mut q_spec = vec![0.0f64; n];
+
         for i in 0..n {
+            p_spec[i] = (grid.buses[i].pg - grid.buses[i].pd) / grid.base_mva;
+            q_spec[i] = (grid.buses[i].qg - grid.buses[i].qd) / grid.base_mva;
+
             if i != ref_idx {
                 non_ref_buses.push(i);
                 non_ref_map[i] = Some(nr_count);
@@ -42,9 +68,8 @@ impl BaseFactors {
             }
         }
 
-        let mut bp = Mat::<f64>::zeros(nr_count, nr_count);
-        let mut bpp = Mat::<f64>::zeros(pq_count, pq_count);
-
+        // Assemble sparse B'
+        let mut bp_triplets = Vec::with_capacity(grid.branches.len() * 4 + nr_count);
         for br in &grid.branches {
             if br.status == 0 {
                 continue;
@@ -55,57 +80,87 @@ impl BaseFactors {
             // B' susceptance for P-Theta
             let b_series = -1.0 / br.x;
             if let Some(fi) = non_ref_map[f] {
-                bp[(fi, fi)] += -b_series;
+                bp_triplets.push(Triplet::new(fi, fi, -b_series));
             }
             if let Some(ti) = non_ref_map[t] {
-                bp[(ti, ti)] += -b_series;
+                bp_triplets.push(Triplet::new(ti, ti, -b_series));
             }
             if let (Some(fi), Some(ti)) = (non_ref_map[f], non_ref_map[t]) {
-                bp[(fi, ti)] += b_series;
-                bp[(ti, fi)] += b_series;
+                bp_triplets.push(Triplet::new(fi, ti, b_series));
+                bp_triplets.push(Triplet::new(ti, fi, b_series));
             }
-
-            // B'' susceptance for Q-V
-            let r2_x2 = br.r * br.r + br.x * br.x;
-            let b_val = -br.x / r2_x2;
-            let b_sh = br.b / 2.0;
-            let a = br.ratio;
-            let bpp_ff = -(b_val + b_sh) / (a * a);
-            let bpp_tt = -(b_val + b_sh);
-            let bpp_ft = b_val / a;
-
-            if let Some(f_pq) = pq_map[f] {
-                bpp[(f_pq, f_pq)] += bpp_ff;
-            }
-            if let Some(t_pq) = pq_map[t] {
-                bpp[(t_pq, t_pq)] += bpp_tt;
-            }
-            if let (Some(f_pq), Some(t_pq)) = (pq_map[f], pq_map[t]) {
-                bpp[(f_pq, t_pq)] += bpp_ft;
-                bpp[(t_pq, f_pq)] += bpp_ft;
-            }
-        }
-
-        // Add bus shunts to B''
-        for &idx in &pq_buses {
-            let pq_i = pq_map[idx].unwrap();
-            bpp[(pq_i, pq_i)] += -grid.buses[idx].bs / grid.base_mva;
         }
 
         // Add small regularization to diagonal to ensure SPD numerical stability
         for i in 0..nr_count {
-            bp[(i, i)] += 1e-6;
-        }
-        for i in 0..pq_count {
-            bpp[(i, i)] += 1e-6;
+            bp_triplets.push(Triplet::new(i, i, 1e-6));
         }
 
-        let bp_solver = bp
-            .ldlt(faer::Side::Lower)
-            .map_err(|_| "Failed to compute Cholesky LDLT of B'")?;
-        let bpp_solver = bpp
-            .ldlt(faer::Side::Lower)
-            .map_err(|_| "Failed to compute Cholesky LDLT of B''")?;
+        let bp_mat = SparseColMat::<usize, f64>::try_new_from_triplets(nr_count, nr_count, &bp_triplets)
+            .map_err(|_| "Failed to assemble sparse B'")?;
+
+        let bp_solver = if let Ok(chol) = bp_mat.sp_cholesky(Side::Lower) {
+            SparseLinearSolver::Cholesky(chol)
+        } else if let Ok(lu) = bp_mat.sp_lu() {
+            SparseLinearSolver::Lu(lu)
+        } else {
+            return Err("Failed to factorize sparse B' (both Cholesky and LU failed)");
+        };
+
+        // Assemble sparse B''
+        let bpp_solver = if pq_count > 0 {
+            let mut bpp_triplets = Vec::with_capacity(grid.branches.len() * 4 + pq_count);
+            for br in &grid.branches {
+                if br.status == 0 {
+                    continue;
+                }
+                let f = *grid.id_to_idx.get(&br.from).unwrap();
+                let t = *grid.id_to_idx.get(&br.to).unwrap();
+
+                let r2_x2 = br.r * br.r + br.x * br.x;
+                let b_val = -br.x / r2_x2;
+                let b_sh = br.b / 2.0;
+                let a = br.ratio;
+                let bpp_ff = -(b_val + b_sh) / (a * a);
+                let bpp_tt = -(b_val + b_sh);
+                let bpp_ft = b_val / a;
+
+                if let Some(f_pq) = pq_map[f] {
+                    bpp_triplets.push(Triplet::new(f_pq, f_pq, bpp_ff));
+                }
+                if let Some(t_pq) = pq_map[t] {
+                    bpp_triplets.push(Triplet::new(t_pq, t_pq, bpp_tt));
+                }
+                if let (Some(f_pq), Some(t_pq)) = (pq_map[f], pq_map[t]) {
+                    bpp_triplets.push(Triplet::new(f_pq, t_pq, bpp_ft));
+                    bpp_triplets.push(Triplet::new(t_pq, f_pq, bpp_ft));
+                }
+            }
+
+            // Add bus shunts to B''
+            for &idx in &pq_buses {
+                let pq_i = pq_map[idx].unwrap();
+                bpp_triplets.push(Triplet::new(pq_i, pq_i, -grid.buses[idx].bs / grid.base_mva));
+            }
+
+            for i in 0..pq_count {
+                bpp_triplets.push(Triplet::new(i, i, 1e-6));
+            }
+
+            let bpp_mat = SparseColMat::<usize, f64>::try_new_from_triplets(pq_count, pq_count, &bpp_triplets)
+                .map_err(|_| "Failed to assemble sparse B''")?;
+
+            let solver = if let Ok(chol) = bpp_mat.sp_cholesky(Side::Lower) {
+                SparseLinearSolver::Cholesky(chol)
+            } else if let Ok(lu) = bpp_mat.sp_lu() {
+                SparseLinearSolver::Lu(lu)
+            } else {
+                return Err("Failed to factorize sparse B'' (both Cholesky and LU failed)");
+            };
+            Some(solver)
+        } else {
+            None
+        };
 
         Ok(Self {
             bp_solver,
@@ -114,17 +169,25 @@ impl BaseFactors {
             non_ref_map,
             pq_buses,
             pq_map,
+            p_spec,
+            q_spec,
         })
     }
 
     /// Solves B' * x = rhs
+    #[inline]
     pub fn solve_bp(&self, rhs: &Mat<f64>) -> Mat<f64> {
         self.bp_solver.solve(rhs)
     }
 
     /// Solves B'' * x = rhs
+    #[inline]
     pub fn solve_bpp(&self, rhs: &Mat<f64>) -> Mat<f64> {
-        self.bpp_solver.solve(rhs)
+        if let Some(solver) = &self.bpp_solver {
+            solver.solve(rhs)
+        } else {
+            Mat::<f64>::zeros(rhs.nrows(), rhs.ncols())
+        }
     }
 }
 
@@ -188,20 +251,24 @@ pub fn evaluate_n2_woodbury(
 
     let f1 = *grid.id_to_idx.get(&br1.from).unwrap();
     let t1 = *grid.id_to_idx.get(&br1.to).unwrap();
-    if let Some(idx) = base_factors.non_ref_map[f1] {
+    let fi1 = base_factors.non_ref_map[f1];
+    let ti1 = base_factors.non_ref_map[t1];
+    if let Some(idx) = fi1 {
         u_p[(idx, 0)] = 1.0;
     }
-    if let Some(idx) = base_factors.non_ref_map[t1] {
+    if let Some(idx) = ti1 {
         u_p[(idx, 0)] = -1.0;
     }
     cp_inv[0] = -br1.x;
 
     let f2 = *grid.id_to_idx.get(&br2.from).unwrap();
     let t2 = *grid.id_to_idx.get(&br2.to).unwrap();
-    if let Some(idx) = base_factors.non_ref_map[f2] {
+    let fi2 = base_factors.non_ref_map[f2];
+    let ti2 = base_factors.non_ref_map[t2];
+    if let Some(idx) = fi2 {
         u_p[(idx, 1)] = 1.0;
     }
-    if let Some(idx) = base_factors.non_ref_map[t2] {
+    if let Some(idx) = ti2 {
         u_p[(idx, 1)] = -1.0;
     }
     cp_inv[1] = -br2.x;
@@ -209,16 +276,25 @@ pub fn evaluate_n2_woodbury(
     // Z_p = B'^-1 * U_p (dimension: nr_count x 2)
     let z_p = base_factors.solve_bp(&u_p);
 
+    // O(1) projection helper: U_p^T * X for col 0 and 1
+    let mult_ut = |col: usize, x_mat: &Mat<f64>, x_col: usize| -> f64 {
+        let (fi, ti) = if col == 0 { (fi1, ti1) } else { (fi2, ti2) };
+        let mut val = 0.0f64;
+        if let Some(idx) = fi {
+            val += x_mat[(idx, x_col)];
+        }
+        if let Some(idx) = ti {
+            val -= x_mat[(idx, x_col)];
+        }
+        val
+    };
+
     // Core matrix M_p = C_p^-1 + U_p^T * Z_p (dimension: 2 x 2)
-    // Compute M_p(i, j) = (i == j ? cp_inv[i] : 0.0) + sum_k U_p(k, i) * Z_p(k, j)
     let mut m_p = [[0.0f64; 2]; 2];
     for i in 0..2 {
         for j in 0..2 {
-            let mut dot = if i == j { cp_inv[i] } else { 0.0 };
-            for k in 0..nr_count {
-                dot += u_p[(k, i)] * z_p[(k, j)];
-            }
-            m_p[i][j] = dot;
+            let diag = if i == j { cp_inv[i] } else { 0.0 };
+            m_p[i][j] = diag + mult_ut(i, &z_p, j);
         }
     }
 
@@ -241,15 +317,11 @@ pub fn evaluate_n2_woodbury(
     // Helper: Woodbury solve for B'_post * dTheta = rhs
     let solve_woodbury_p = |rhs: &Mat<f64>| -> Mat<f64> {
         let d_base = base_factors.solve_bp(rhs);
-        // temp = U_p^T * d_base (length 2)
-        let mut ut_dbase = [0.0f64; 2];
-        for col in 0..2 {
-            let mut sum = 0.0;
-            for k in 0..nr_count {
-                sum += u_p[(k, col)] * d_base[(k, 0)];
-            }
-            ut_dbase[col] = sum;
-        }
+        // temp = U_p^T * d_base (length 2) in O(1)
+        let ut_dbase = [
+            mult_ut(0, &d_base, 0),
+            mult_ut(1, &d_base, 0),
+        ];
         // alpha = CoreInv * ut_dbase
         let alpha0 = core_inv[0][0] * ut_dbase[0] + core_inv[0][1] * ut_dbase[1];
         let alpha1 = core_inv[1][0] * ut_dbase[0] + core_inv[1][1] * ut_dbase[1];
@@ -272,13 +344,9 @@ pub fn evaluate_n2_woodbury(
     let max_iters = 15;
     let mut converged = false;
 
-    // Power injection specifications in p.u.
-    let mut p_spec = vec![0.0f64; n];
-    let mut q_spec = vec![0.0f64; n];
-    for i in 0..n {
-        p_spec[i] = (grid.buses[i].pg - grid.buses[i].pd) / grid.base_mva;
-        q_spec[i] = (grid.buses[i].qg - grid.buses[i].qd) / grid.base_mva;
-    }
+    // Constant power injection specifications in p.u. (from BaseFactors)
+    let p_spec = &base_factors.p_spec;
+    let q_spec = &base_factors.q_spec;
 
     for _iter in 0..max_iters {
         // Calculate power flow mismatches with remaining branches
@@ -341,6 +409,11 @@ pub fn evaluate_n2_woodbury(
 
         if max_p_mis < tol && max_q_mis < tol {
             converged = true;
+            break;
+        }
+
+        if max_p_mis > 20.0 || max_p_mis.is_nan() {
+            converged = false;
             break;
         }
 
@@ -474,6 +547,34 @@ mod tests {
     use super::*;
     use crate::parser::parse_matpower;
     use std::path::Path;
+
+    #[test]
+    fn test_sparse_base_factors_all_cases() {
+        for case_name in &["case14.m", "case57.m", "case118.m", "case9241pegase.m"] {
+            let path = format!("../data/{}", case_name);
+            let path_ref = Path::new(&path);
+            if !path_ref.exists() {
+                continue;
+            }
+            let t0 = Instant::now();
+            let grid = parse_matpower(path_ref).unwrap();
+            let factors = BaseFactors::build(&grid).expect("Base factors build failed");
+            let build_dur = t0.elapsed();
+
+            let nr = factors.non_ref_buses.len();
+            let mut rhs = Mat::<f64>::zeros(nr, 2);
+            rhs[(0, 0)] = 1.0;
+            rhs[(0, 1)] = -1.0;
+
+            let t_solve = Instant::now();
+            let x = factors.solve_bp(&rhs);
+            let solve_dur = t_solve.elapsed();
+            assert_eq!(x.nrows(), nr);
+
+            println!("✓ BaseFactors on {} (N = {}): Build: {:.2} ms, 2-col Solve: {:.3} ms",
+                case_name, nr, build_dur.as_secs_f64() * 1000.0, solve_dur.as_secs_f64() * 1000.0);
+        }
+    }
 
     #[test]
     fn test_base_factors_case14() {
