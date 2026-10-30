@@ -191,6 +191,81 @@ impl BaseFactors {
     }
 }
 
+/// Fast in-place inversion for small matrices up to 4x4 using Gauss-Jordan with partial pivoting
+pub fn invert_small_matrix(a: &[[f64; 4]; 4], n: usize) -> Option<[[f64; 4]; 4]> {
+    if n == 0 {
+        return Some([[0.0; 4]; 4]);
+    }
+    if n == 1 {
+        let det = a[0][0];
+        if det.abs() < 1e-11 {
+            return None;
+        }
+        let mut inv = [[0.0; 4]; 4];
+        inv[0][0] = 1.0 / det;
+        return Some(inv);
+    }
+    if n == 2 {
+        let det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
+        if det.abs() < 1e-11 {
+            return None;
+        }
+        let inv_det = 1.0 / det;
+        let mut inv = [[0.0; 4]; 4];
+        inv[0][0] = a[1][1] * inv_det;
+        inv[0][1] = -a[0][1] * inv_det;
+        inv[1][0] = -a[1][0] * inv_det;
+        inv[1][1] = a[0][0] * inv_det;
+        return Some(inv);
+    }
+
+    let mut mat = [[0.0f64; 8]; 4];
+    for i in 0..n {
+        for j in 0..n {
+            mat[i][j] = a[i][j];
+        }
+        mat[i][n + i] = 1.0;
+    }
+
+    for i in 0..n {
+        let mut max_row = i;
+        let mut max_val = mat[i][i].abs();
+        for k in (i + 1)..n {
+            let val = mat[k][i].abs();
+            if val > max_val {
+                max_val = val;
+                max_row = k;
+            }
+        }
+        if max_val < 1e-11 {
+            return None;
+        }
+        mat.swap(i, max_row);
+
+        let inv_pivot = 1.0 / mat[i][i];
+        for j in 0..(2 * n) {
+            mat[i][j] *= inv_pivot;
+        }
+
+        for k in 0..n {
+            if k != i {
+                let factor = mat[k][i];
+                for j in 0..(2 * n) {
+                    mat[k][j] -= factor * mat[i][j];
+                }
+            }
+        }
+    }
+
+    let mut inv = [[0.0f64; 4]; 4];
+    for i in 0..n {
+        for j in 0..n {
+            inv[i][j] = mat[i][n + j];
+        }
+    }
+    Some(inv)
+}
+
 /// Thread-local reusable solver workspace (zero-allocation per contingency)
 pub struct SolverWorkspace {
     pub theta: Vec<f64>,
@@ -200,6 +275,7 @@ pub struct SolverWorkspace {
     pub u_p: Mat<f64>,
     pub mis_p: Mat<f64>,
     pub mis_q: Mat<f64>,
+    pub u_pp: Mat<f64>,
 }
 
 impl Default for SolverWorkspace {
@@ -212,6 +288,7 @@ impl Default for SolverWorkspace {
             u_p: Mat::<f64>::zeros(0, 0),
             mis_p: Mat::<f64>::zeros(0, 0),
             mis_q: Mat::<f64>::zeros(0, 0),
+            u_pp: Mat::<f64>::zeros(0, 0),
         }
     }
 }
@@ -232,6 +309,9 @@ impl SolverWorkspace {
         }
         if self.mis_q.nrows() != pq_count || self.mis_q.ncols() != 1 {
             self.mis_q = Mat::<f64>::zeros(pq_count, 1);
+        }
+        if self.u_pp.nrows() != pq_count || self.u_pp.ncols() != 4 {
+            self.u_pp = Mat::<f64>::zeros(pq_count, 4);
         }
     }
 }
@@ -382,6 +462,120 @@ pub fn evaluate_n2_woodbury_with_ws(
         [-m_p[1][0] * inv_det, m_p[0][0] * inv_det],
     ];
 
+    // 2B. BUILD WOODBURY MATRICES FOR B'' (Q-V)
+    let mut bpp_pq_nodes = [0usize; 4];
+    let mut bpp_c_blocks = [[[0.0f64; 2]; 2]; 2];
+    let mut bpp_block_sizes = [0usize; 2];
+    let mut pp_rank = 0usize;
+    let mut num_blocks = 0usize;
+
+    for &br in &[br1, br2] {
+        let f = br.from_idx;
+        let t = br.to_idx;
+        let r2_x2 = br.r * br.r + br.x * br.x;
+        let b_val = -br.x / r2_x2;
+        let b_sh = br.b / 2.0;
+        let a = br.ratio;
+
+        let bpp_ff = -(b_val + b_sh) / (a * a);
+        let bpp_tt = -(b_val + b_sh);
+        let bpp_ft = b_val / a;
+
+        let f_pq = base_factors.pq_map[f];
+        let t_pq = base_factors.pq_map[t];
+
+        match (f_pq, t_pq) {
+            (Some(f_idx), Some(t_idx)) => {
+                bpp_pq_nodes[pp_rank] = f_idx;
+                bpp_pq_nodes[pp_rank + 1] = t_idx;
+                bpp_c_blocks[num_blocks][0][0] = -bpp_ff;
+                bpp_c_blocks[num_blocks][0][1] = -bpp_ft;
+                bpp_c_blocks[num_blocks][1][0] = -bpp_ft;
+                bpp_c_blocks[num_blocks][1][1] = -bpp_tt;
+                bpp_block_sizes[num_blocks] = 2;
+                num_blocks += 1;
+                pp_rank += 2;
+            }
+            (Some(f_idx), None) => {
+                bpp_pq_nodes[pp_rank] = f_idx;
+                bpp_c_blocks[num_blocks][0][0] = -bpp_ff;
+                bpp_block_sizes[num_blocks] = 1;
+                num_blocks += 1;
+                pp_rank += 1;
+            }
+            (None, Some(t_idx)) => {
+                bpp_pq_nodes[pp_rank] = t_idx;
+                bpp_c_blocks[num_blocks][0][0] = -bpp_tt;
+                bpp_block_sizes[num_blocks] = 1;
+                num_blocks += 1;
+                pp_rank += 1;
+            }
+            (None, None) => {}
+        }
+    }
+
+    let mut c_pp_inv = [[0.0f64; 4]; 4];
+    let mut col_cursor = 0usize;
+    let mut c_pp_inv_valid = true;
+
+    for b in 0..num_blocks {
+        let sz = bpp_block_sizes[b];
+        if sz == 1 {
+            let val = bpp_c_blocks[b][0][0];
+            if val.abs() < 1e-11 {
+                c_pp_inv_valid = false;
+                break;
+            }
+            c_pp_inv[col_cursor][col_cursor] = 1.0 / val;
+            col_cursor += 1;
+        } else if sz == 2 {
+            let b00 = bpp_c_blocks[b][0][0];
+            let b01 = bpp_c_blocks[b][0][1];
+            let b10 = bpp_c_blocks[b][1][0];
+            let b11 = bpp_c_blocks[b][1][1];
+            let det = b00 * b11 - b01 * b10;
+            if det.abs() < 1e-11 {
+                c_pp_inv_valid = false;
+                break;
+            }
+            let inv_det = 1.0 / det;
+            c_pp_inv[col_cursor][col_cursor] = b11 * inv_det;
+            c_pp_inv[col_cursor][col_cursor + 1] = -b01 * inv_det;
+            c_pp_inv[col_cursor + 1][col_cursor] = -b10 * inv_det;
+            c_pp_inv[col_cursor + 1][col_cursor + 1] = b00 * inv_det;
+            col_cursor += 2;
+        }
+    }
+
+    let mut use_woodbury_q = false;
+    let mut core_inv_q = [[0.0f64; 4]; 4];
+    let mut z_pp = Mat::<f64>::zeros(0, 0);
+
+    if pp_rank > 0 && c_pp_inv_valid && base_factors.bpp_solver.is_some() {
+        ws.u_pp.fill(0.0);
+        for col in 0..pp_rank {
+            let pq_idx = bpp_pq_nodes[col];
+            ws.u_pp[(pq_idx, col)] = 1.0;
+        }
+
+        let u_pp_sub = ws.u_pp.as_ref().subcols(0, pp_rank).to_owned();
+        z_pp = base_factors.solve_bpp(&u_pp_sub);
+
+        // Core matrix M_pp = C_pp^-1 + U_pp^T * Z_pp
+        let mut m_pp = [[0.0f64; 4]; 4];
+        for i in 0..pp_rank {
+            for j in 0..pp_rank {
+                let u_t_z = z_pp[(bpp_pq_nodes[i], j)];
+                m_pp[i][j] = c_pp_inv[i][j] + u_t_z;
+            }
+        }
+
+        if let Some(inv_m) = invert_small_matrix(&m_pp, pp_rank) {
+            core_inv_q = inv_m;
+            use_woodbury_q = true;
+        }
+    }
+
     // 3. FAST ITERATION SOLVER (WARM-START FROM BASE CASE)
     ws.theta.copy_from_slice(warm_theta);
     ws.v.copy_from_slice(warm_v);
@@ -480,11 +674,34 @@ pub fn evaluate_n2_woodbury_with_ws(
         }
         res.p_iters += 1;
 
-        // Q-step: Update PQ voltages using base B''
+        // Q-step: Update PQ voltages using Dual-Woodbury B''
         if pq_count > 0 {
-            let d_vm = base_factors.solve_bpp(&ws.mis_q);
-            for (i, &bus_idx) in base_factors.pq_buses.iter().enumerate() {
-                ws.v[bus_idx] = (ws.v[bus_idx] + d_vm[(i, 0)]).clamp(0.5, 1.5);
+            let d_vm_base = base_factors.solve_bpp(&ws.mis_q);
+            if use_woodbury_q {
+                let mut ut_dbase_q = [0.0f64; 4];
+                for k in 0..pp_rank {
+                    ut_dbase_q[k] = d_vm_base[(bpp_pq_nodes[k], 0)];
+                }
+                let mut beta = [0.0f64; 4];
+                for i in 0..pp_rank {
+                    let mut sum = 0.0;
+                    for j in 0..pp_rank {
+                        sum += core_inv_q[i][j] * ut_dbase_q[j];
+                    }
+                    beta[i] = sum;
+                }
+                for (i, &bus_idx) in base_factors.pq_buses.iter().enumerate() {
+                    let mut z_beta = 0.0;
+                    for k in 0..pp_rank {
+                        z_beta += z_pp[(i, k)] * beta[k];
+                    }
+                    let d_vm = d_vm_base[(i, 0)] - z_beta;
+                    ws.v[bus_idx] = (ws.v[bus_idx] + d_vm).clamp(0.5, 1.5);
+                }
+            } else {
+                for (i, &bus_idx) in base_factors.pq_buses.iter().enumerate() {
+                    ws.v[bus_idx] = (ws.v[bus_idx] + d_vm_base[(i, 0)]).clamp(0.5, 1.5);
+                }
             }
             res.q_iters += 1;
         }
@@ -644,6 +861,81 @@ mod tests {
             assert!(res.solve_time_us > 0.0);
             println!("✓ N-2 evaluate (0, 2) completed in {:.2} µs: Max loading: {:.1}%, PI_Total: {:.2}",
                 res.solve_time_us, res.max_loading_pct, res.pi_total);
+        }
+    }
+
+    #[test]
+    fn test_invert_small_matrix() {
+        // Test 1x1
+        let a1 = [[4.0, 0.0, 0.0, 0.0], [0.0; 4], [0.0; 4], [0.0; 4]];
+        let inv1 = invert_small_matrix(&a1, 1).unwrap();
+        assert!((inv1[0][0] - 0.25).abs() < 1e-9);
+
+        // Test 2x2
+        let a2 = [
+            [4.0, 1.0, 0.0, 0.0],
+            [1.0, 3.0, 0.0, 0.0],
+            [0.0; 4],
+            [0.0; 4],
+        ];
+        let inv2 = invert_small_matrix(&a2, 2).unwrap();
+        assert!((inv2[0][0] * a2[0][0] + inv2[0][1] * a2[1][0] - 1.0).abs() < 1e-9);
+        assert!((inv2[0][0] * a2[0][1] + inv2[0][1] * a2[1][1]).abs() < 1e-9);
+
+        // Test 3x3
+        let a3 = [
+            [2.0, 1.0, 0.0, 0.0],
+            [1.0, 3.0, 1.0, 0.0],
+            [0.0, 1.0, 2.0, 0.0],
+            [0.0; 4],
+        ];
+        let inv3 = invert_small_matrix(&a3, 3).unwrap();
+        for i in 0..3 {
+            for j in 0..3 {
+                let mut dot = 0.0;
+                for k in 0..3 {
+                    dot += a3[i][k] * inv3[k][j];
+                }
+                let expected = if i == j { 1.0 } else { 0.0 };
+                assert!((dot - expected).abs() < 1e-9);
+            }
+        }
+
+        // Test 4x4
+        let a4 = [
+            [5.0, 1.0, 0.0, 2.0],
+            [1.0, 4.0, 1.0, 0.0],
+            [0.0, 1.0, 3.0, 1.0],
+            [2.0, 0.0, 1.0, 6.0],
+        ];
+        let inv4 = invert_small_matrix(&a4, 4).unwrap();
+        for i in 0..4 {
+            for j in 0..4 {
+                let mut dot = 0.0;
+                for k in 0..4 {
+                    dot += a4[i][k] * inv4[k][j];
+                }
+                let expected = if i == j { 1.0 } else { 0.0 };
+                assert!((dot - expected).abs() < 1e-9);
+            }
+        }
+    }
+
+    #[test]
+    fn test_dual_woodbury_pq_contingencies() {
+        let path = Path::new("../data/case14.m");
+        if path.exists() {
+            let grid = parse_matpower(path).expect("Should parse case14");
+            let base_factors = BaseFactors::build(&grid).expect("Base factors should build");
+            let base_res = crate::power_flow::solve_base_case(&grid, &base_factors);
+
+            // Test contingency with branches connected to PQ buses (e.g. branch 5: 2-5 and branch 9: 4-9)
+            let res = evaluate_n2_woodbury(&grid, &base_factors, &base_res.warm_v, &base_res.warm_theta, 5, 9);
+            assert!(res.min_voltage > 0.8 && res.min_voltage < 1.1);
+            assert!(res.max_voltage > 0.9 && res.max_voltage < 1.2);
+            assert!(res.q_iters > 0);
+            println!("✓ Dual-Woodbury N-2 (5, 9): status={:?}, p_iters={}, q_iters={}, min_v={:.3}, max_v={:.3}",
+                res.status, res.p_iters, res.q_iters, res.min_voltage, res.max_voltage);
         }
     }
 }
