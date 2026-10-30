@@ -1,16 +1,30 @@
+use std::cell::RefCell;
 use crate::grid::GridModel;
 
-#[derive(Debug, Clone)]
-pub struct Dsu {
-    parent: Vec<usize>,
-    rank: Vec<usize>,
+#[derive(Default)]
+pub struct DsuWorkspace {
+    pub parent: Vec<usize>,
+    pub rank: Vec<usize>,
+    pub component_sizes: Vec<usize>,
+    pub component_load: Vec<f64>,
+    pub component_gen: Vec<f64>,
 }
 
-impl Dsu {
-    pub fn new(n: usize) -> Self {
-        Self {
-            parent: (0..n).collect(),
-            rank: vec![0; n],
+impl DsuWorkspace {
+    pub fn reset(&mut self, n: usize) {
+        if self.parent.len() != n {
+            self.parent.resize(n, 0);
+            self.rank.resize(n, 0);
+            self.component_sizes.resize(n, 0);
+            self.component_load.resize(n, 0.0);
+            self.component_gen.resize(n, 0.0);
+        }
+        for i in 0..n {
+            self.parent[i] = i;
+            self.rank[i] = 0;
+            self.component_sizes[i] = 0;
+            self.component_load[i] = 0.0;
+            self.component_gen[i] = 0.0;
         }
     }
 
@@ -46,6 +60,10 @@ impl Dsu {
     }
 }
 
+thread_local! {
+    static DSU_WORKSPACE: RefCell<DsuWorkspace> = RefCell::new(DsuWorkspace::default());
+}
+
 #[derive(Debug, Clone)]
 pub struct IslandInfo {
     pub is_islanded: bool,
@@ -59,41 +77,47 @@ pub fn check_islanding(
     trip_branch1: usize,
     trip_branch2: usize,
 ) -> IslandInfo {
+    DSU_WORKSPACE.with(|ws_cell| {
+        let mut ws = ws_cell.borrow_mut();
+        check_islanding_with_ws(grid, trip_branch1, trip_branch2, &mut ws)
+    })
+}
+
+pub fn check_islanding_with_ws(
+    grid: &GridModel,
+    trip_branch1: usize,
+    trip_branch2: usize,
+    ws: &mut DsuWorkspace,
+) -> IslandInfo {
     let n = grid.buses.len();
-    let mut dsu = Dsu::new(n);
+    ws.reset(n);
 
     for (idx, br) in grid.branches.iter().enumerate() {
         if idx == trip_branch1 || idx == trip_branch2 || br.status == 0 {
             continue;
         }
-        if let (Some(&u), Some(&v)) = (grid.id_to_idx.get(&br.from), grid.id_to_idx.get(&br.to)) {
-            dsu.union(u, v);
-        }
+        ws.union(br.from_idx, br.to_idx);
     }
-
-    let mut component_sizes = vec![0usize; n];
-    let mut component_load = vec![0.0f64; n];
-    let mut component_gen = vec![0.0f64; n];
 
     for i in 0..n {
-        let root = dsu.find(i);
-        component_sizes[root] += 1;
-        component_load[root] += grid.buses[i].pd;
-        component_gen[root] += grid.buses[i].pg;
+        let root = ws.find(i);
+        ws.component_sizes[root] += 1;
+        ws.component_load[root] += grid.buses[i].pd;
+        ws.component_gen[root] += grid.buses[i].pg;
     }
 
-    let ref_root = dsu.find(grid.ref_bus_idx);
+    let ref_root = ws.find(grid.ref_bus_idx);
 
     let mut num_islands = 0;
     let mut isolated_load_mw = 0.0;
     let mut isolated_bus_count = 0;
 
     for i in 0..n {
-        if component_sizes[i] > 0 {
+        if ws.component_sizes[i] > 0 {
             num_islands += 1;
             if i != ref_root {
-                isolated_load_mw += component_load[i];
-                isolated_bus_count += component_sizes[i];
+                isolated_load_mw += ws.component_load[i];
+                isolated_bus_count += ws.component_sizes[i];
             }
         }
     }

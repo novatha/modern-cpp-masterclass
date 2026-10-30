@@ -39,6 +39,8 @@ pub struct Branch {
     pub id: usize,     // 1-based index
     pub from: i32,     // From bus ID
     pub to: i32,       // To bus ID
+    pub from_idx: usize, // 0-based index into buses array
+    pub to_idx: usize,   // 0-based index into buses array
     pub r: f64,        // Resistance (p.u.)
     pub x: f64,        // Reactance (p.u.)
     pub b: f64,        // Total line charging susceptance (p.u.)
@@ -54,6 +56,8 @@ impl Default for Branch {
             id: 0,
             from: 0,
             to: 0,
+            from_idx: 0,
+            to_idx: 0,
             r: 0.0,
             x: 0.0,
             b: 0.0,
@@ -186,6 +190,11 @@ impl GridModel {
             if g.status > 0 {
                 self.total_gen_mw += g.pg;
             }
+        }
+
+        for br in &mut self.branches {
+            br.from_idx = *self.id_to_idx.get(&br.from).unwrap_or(&0);
+            br.to_idx = *self.id_to_idx.get(&br.to).unwrap_or(&0);
         }
     }
 }

@@ -47,8 +47,8 @@ pub fn solve_base_case(grid: &GridModel, base_factors: &BaseFactors) -> BaseCase
             if br.status == 0 {
                 continue;
             }
-            let bi = *grid.id_to_idx.get(&br.from).unwrap();
-            let bj = *grid.id_to_idx.get(&br.to).unwrap();
+            let bi = br.from_idx;
+            let bj = br.to_idx;
 
             let z2 = br.r * br.r + br.x * br.x;
             let g_ij = br.r / z2;
@@ -128,8 +128,8 @@ pub fn solve_base_case(grid: &GridModel, base_factors: &BaseFactors) -> BaseCase
         if br.status == 0 {
             continue;
         }
-        let bi = *grid.id_to_idx.get(&br.from).unwrap();
-        let bj = *grid.id_to_idx.get(&br.to).unwrap();
+        let bi = br.from_idx;
+        let bj = br.to_idx;
 
         let z2 = br.r * br.r + br.x * br.x;
         let g_ij = br.r / z2;

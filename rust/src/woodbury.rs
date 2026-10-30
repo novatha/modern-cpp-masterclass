@@ -74,8 +74,8 @@ impl BaseFactors {
             if br.status == 0 {
                 continue;
             }
-            let f = *grid.id_to_idx.get(&br.from).unwrap();
-            let t = *grid.id_to_idx.get(&br.to).unwrap();
+            let f = br.from_idx;
+            let t = br.to_idx;
 
             // B' susceptance for P-Theta
             let b_series = -1.0 / br.x;
@@ -114,8 +114,8 @@ impl BaseFactors {
                 if br.status == 0 {
                     continue;
                 }
-                let f = *grid.id_to_idx.get(&br.from).unwrap();
-                let t = *grid.id_to_idx.get(&br.to).unwrap();
+                let f = br.from_idx;
+                let t = br.to_idx;
 
                 let r2_x2 = br.r * br.r + br.x * br.x;
                 let b_val = -br.x / r2_x2;
@@ -191,7 +191,56 @@ impl BaseFactors {
     }
 }
 
-/// Fast Decoupled + Woodbury N-2 Contingency Evaluator
+/// Thread-local reusable solver workspace (zero-allocation per contingency)
+pub struct SolverWorkspace {
+    pub theta: Vec<f64>,
+    pub v: Vec<f64>,
+    pub p_calc: Vec<f64>,
+    pub q_calc: Vec<f64>,
+    pub u_p: Mat<f64>,
+    pub mis_p: Mat<f64>,
+    pub mis_q: Mat<f64>,
+}
+
+impl Default for SolverWorkspace {
+    fn default() -> Self {
+        Self {
+            theta: Vec::new(),
+            v: Vec::new(),
+            p_calc: Vec::new(),
+            q_calc: Vec::new(),
+            u_p: Mat::<f64>::zeros(0, 0),
+            mis_p: Mat::<f64>::zeros(0, 0),
+            mis_q: Mat::<f64>::zeros(0, 0),
+        }
+    }
+}
+
+impl SolverWorkspace {
+    pub fn ensure_capacity(&mut self, n: usize, nr_count: usize, pq_count: usize) {
+        if self.theta.len() != n {
+            self.theta.resize(n, 0.0);
+            self.v.resize(n, 1.0);
+            self.p_calc.resize(n, 0.0);
+            self.q_calc.resize(n, 0.0);
+        }
+        if self.u_p.nrows() != nr_count || self.u_p.ncols() != 2 {
+            self.u_p = Mat::<f64>::zeros(nr_count, 2);
+        }
+        if self.mis_p.nrows() != nr_count || self.mis_p.ncols() != 1 {
+            self.mis_p = Mat::<f64>::zeros(nr_count, 1);
+        }
+        if self.mis_q.nrows() != pq_count || self.mis_q.ncols() != 1 {
+            self.mis_q = Mat::<f64>::zeros(pq_count, 1);
+        }
+    }
+}
+
+thread_local! {
+    static THREAD_WORKSPACE: std::cell::RefCell<SolverWorkspace> = std::cell::RefCell::new(SolverWorkspace::default());
+}
+
+/// Fast Decoupled + Woodbury N-2 Contingency Evaluator (automatically uses thread-local workspace)
 pub fn evaluate_n2_woodbury(
     grid: &GridModel,
     base_factors: &BaseFactors,
@@ -199,6 +248,22 @@ pub fn evaluate_n2_woodbury(
     warm_theta: &[f64],
     trip1: usize,
     trip2: usize,
+) -> ContingencyResult {
+    THREAD_WORKSPACE.with(|ws_cell| {
+        let mut ws = ws_cell.borrow_mut();
+        evaluate_n2_woodbury_with_ws(grid, base_factors, warm_v, warm_theta, trip1, trip2, &mut ws)
+    })
+}
+
+/// Fast Decoupled + Woodbury N-2 Contingency Evaluator with explicit workspace
+pub fn evaluate_n2_woodbury_with_ws(
+    grid: &GridModel,
+    base_factors: &BaseFactors,
+    warm_v: &[f64],
+    warm_theta: &[f64],
+    trip1: usize,
+    trip2: usize,
+    ws: &mut SolverWorkspace,
 ) -> ContingencyResult {
     let t_start = Instant::now();
     let br1 = &grid.branches[trip1];
@@ -243,38 +308,41 @@ pub fn evaluate_n2_woodbury(
 
     let n = grid.buses.len();
     let nr_count = base_factors.non_ref_buses.len();
+    let pq_count = base_factors.pq_buses.len();
+
+    // Ensure capacity of workspace
+    ws.ensure_capacity(n, nr_count, pq_count);
 
     // 2. BUILD WOODBURY MATRICES FOR B' (P-Theta)
-    // U_p has 2 columns: column 0 for branch trip1, column 1 for branch trip2
-    let mut u_p = Mat::<f64>::zeros(nr_count, 2);
+    ws.u_p.fill(0.0);
     let mut cp_inv = [0.0f64; 2]; // diagonal entries of C_p^-1 = [-x1, -x2]
 
-    let f1 = *grid.id_to_idx.get(&br1.from).unwrap();
-    let t1 = *grid.id_to_idx.get(&br1.to).unwrap();
+    let f1 = br1.from_idx;
+    let t1 = br1.to_idx;
     let fi1 = base_factors.non_ref_map[f1];
     let ti1 = base_factors.non_ref_map[t1];
     if let Some(idx) = fi1 {
-        u_p[(idx, 0)] = 1.0;
+        ws.u_p[(idx, 0)] = 1.0;
     }
     if let Some(idx) = ti1 {
-        u_p[(idx, 0)] = -1.0;
+        ws.u_p[(idx, 0)] = -1.0;
     }
     cp_inv[0] = -br1.x;
 
-    let f2 = *grid.id_to_idx.get(&br2.from).unwrap();
-    let t2 = *grid.id_to_idx.get(&br2.to).unwrap();
+    let f2 = br2.from_idx;
+    let t2 = br2.to_idx;
     let fi2 = base_factors.non_ref_map[f2];
     let ti2 = base_factors.non_ref_map[t2];
     if let Some(idx) = fi2 {
-        u_p[(idx, 1)] = 1.0;
+        ws.u_p[(idx, 1)] = 1.0;
     }
     if let Some(idx) = ti2 {
-        u_p[(idx, 1)] = -1.0;
+        ws.u_p[(idx, 1)] = -1.0;
     }
     cp_inv[1] = -br2.x;
 
     // Z_p = B'^-1 * U_p (dimension: nr_count x 2)
-    let z_p = base_factors.solve_bp(&u_p);
+    let z_p = base_factors.solve_bp(&ws.u_p);
 
     // O(1) projection helper: U_p^T * X for col 0 and 1
     let mult_ut = |col: usize, x_mat: &Mat<f64>, x_col: usize| -> f64 {
@@ -314,31 +382,11 @@ pub fn evaluate_n2_woodbury(
         [-m_p[1][0] * inv_det, m_p[0][0] * inv_det],
     ];
 
-    // Helper: Woodbury solve for B'_post * dTheta = rhs
-    let solve_woodbury_p = |rhs: &Mat<f64>| -> Mat<f64> {
-        let d_base = base_factors.solve_bp(rhs);
-        // temp = U_p^T * d_base (length 2) in O(1)
-        let ut_dbase = [
-            mult_ut(0, &d_base, 0),
-            mult_ut(1, &d_base, 0),
-        ];
-        // alpha = CoreInv * ut_dbase
-        let alpha0 = core_inv[0][0] * ut_dbase[0] + core_inv[0][1] * ut_dbase[1];
-        let alpha1 = core_inv[1][0] * ut_dbase[0] + core_inv[1][1] * ut_dbase[1];
-
-        // result = d_base - Z_p * alpha
-        let mut res_mat = Mat::<f64>::zeros(nr_count, 1);
-        for k in 0..nr_count {
-            res_mat[(k, 0)] = d_base[(k, 0)] - (z_p[(k, 0)] * alpha0 + z_p[(k, 1)] * alpha1);
-        }
-        res_mat
-    };
-
     // 3. FAST ITERATION SOLVER (WARM-START FROM BASE CASE)
-    let mut theta = warm_theta.to_vec();
-    let mut v = warm_v.to_vec();
+    ws.theta.copy_from_slice(warm_theta);
+    ws.v.copy_from_slice(warm_v);
     let ref_idx = grid.ref_bus_idx;
-    theta[ref_idx] = 0.0;
+    ws.theta[ref_idx] = 0.0;
 
     let tol = 1e-3;
     let max_iters = 15;
@@ -350,13 +398,13 @@ pub fn evaluate_n2_woodbury(
 
     for _iter in 0..max_iters {
         // Calculate power flow mismatches with remaining branches
-        let mut p_calc = vec![0.0f64; n];
-        let mut q_calc = vec![0.0f64; n];
+        ws.p_calc.fill(0.0);
+        ws.q_calc.fill(0.0);
 
         // Bus shunt power
         for i in 0..n {
-            p_calc[i] += grid.buses[i].gs / grid.base_mva * v[i] * v[i];
-            q_calc[i] += -grid.buses[i].bs / grid.base_mva * v[i] * v[i];
+            ws.p_calc[i] += grid.buses[i].gs / grid.base_mva * ws.v[i] * ws.v[i];
+            ws.q_calc[i] += -grid.buses[i].bs / grid.base_mva * ws.v[i] * ws.v[i];
         }
 
         // Branch power flows
@@ -364,16 +412,16 @@ pub fn evaluate_n2_woodbury(
             if idx == trip1 || idx == trip2 || br.status == 0 {
                 continue;
             }
-            let bi = *grid.id_to_idx.get(&br.from).unwrap();
-            let bj = *grid.id_to_idx.get(&br.to).unwrap();
+            let bi = br.from_idx;
+            let bj = br.to_idx;
 
             let z2 = br.r * br.r + br.x * br.x;
             let g_ij = br.r / z2;
             let b_ij = -br.x / z2;
 
-            let vi = v[bi];
-            let vj = v[bj];
-            let d_theta = theta[bi] - theta[bj];
+            let vi = ws.v[bi];
+            let vj = ws.v[bj];
+            let d_theta = ws.theta[bi] - ws.theta[bj];
 
             let cos_th = d_theta.cos();
             let sin_th = d_theta.sin();
@@ -385,25 +433,25 @@ pub fn evaluate_n2_woodbury(
             let p_to = vj * vj * g_ij - vi * vj * (g_ij * cos_th - b_ij * sin_th);
             let q_to = -vj * vj * (b_ij + br.b / 2.0) - vi * vj * (-g_ij * sin_th - b_ij * cos_th);
 
-            p_calc[bi] += p_from;
-            q_calc[bi] += q_from;
-            p_calc[bj] += p_to;
-            q_calc[bj] += q_to;
+            ws.p_calc[bi] += p_from;
+            ws.q_calc[bi] += q_from;
+            ws.p_calc[bj] += p_to;
+            ws.q_calc[bj] += q_to;
         }
 
         // Compute active power mismatch dP / V
         let mut max_p_mis = 0.0f64;
-        let mut mis_p = Mat::<f64>::zeros(nr_count, 1);
         for (i, &bus_idx) in base_factors.non_ref_buses.iter().enumerate() {
-            let p_err = (p_calc[bus_idx] - p_spec[bus_idx]) / v[bus_idx];
-            mis_p[(i, 0)] = -p_err;
+            let p_err = (ws.p_calc[bus_idx] - p_spec[bus_idx]) / ws.v[bus_idx];
+            ws.mis_p[(i, 0)] = -p_err;
             max_p_mis = max_p_mis.max(p_err.abs());
         }
 
         // Compute reactive power mismatch dQ / V for PQ buses
         let mut max_q_mis = 0.0f64;
-        for &bus_idx in &base_factors.pq_buses {
-            let q_err = (q_calc[bus_idx] - q_spec[bus_idx]) / v[bus_idx];
+        for (i, &bus_idx) in base_factors.pq_buses.iter().enumerate() {
+            let q_err = (ws.q_calc[bus_idx] - q_spec[bus_idx]) / ws.v[bus_idx];
+            ws.mis_q[(i, 0)] = -q_err;
             max_q_mis = max_q_mis.max(q_err.abs());
         }
 
@@ -417,24 +465,26 @@ pub fn evaluate_n2_woodbury(
             break;
         }
 
-        // P-step: Update angles using Woodbury solver
-        let d_va = solve_woodbury_p(&mis_p);
+        // P-step: Update angles using Woodbury solver directly into ws.theta
+        let d_base = base_factors.solve_bp(&ws.mis_p);
+        let ut_dbase = [
+            mult_ut(0, &d_base, 0),
+            mult_ut(1, &d_base, 0),
+        ];
+        let alpha0 = core_inv[0][0] * ut_dbase[0] + core_inv[0][1] * ut_dbase[1];
+        let alpha1 = core_inv[1][0] * ut_dbase[0] + core_inv[1][1] * ut_dbase[1];
+
         for (i, &bus_idx) in base_factors.non_ref_buses.iter().enumerate() {
-            theta[bus_idx] += d_va[(i, 0)];
+            let d_va = d_base[(i, 0)] - (z_p[(i, 0)] * alpha0 + z_p[(i, 1)] * alpha1);
+            ws.theta[bus_idx] += d_va;
         }
         res.p_iters += 1;
 
         // Q-step: Update PQ voltages using base B''
-        if !base_factors.pq_buses.is_empty() {
-            let pq_count = base_factors.pq_buses.len();
-            let mut mis_q = Mat::<f64>::zeros(pq_count, 1);
+        if pq_count > 0 {
+            let d_vm = base_factors.solve_bpp(&ws.mis_q);
             for (i, &bus_idx) in base_factors.pq_buses.iter().enumerate() {
-                let q_err = (q_calc[bus_idx] - q_spec[bus_idx]) / v[bus_idx];
-                mis_q[(i, 0)] = -q_err;
-            }
-            let d_vm = base_factors.solve_bpp(&mis_q);
-            for (i, &bus_idx) in base_factors.pq_buses.iter().enumerate() {
-                v[bus_idx] = (v[bus_idx] + d_vm[(i, 0)]).clamp(0.5, 1.5);
+                ws.v[bus_idx] = (ws.v[bus_idx] + d_vm[(i, 0)]).clamp(0.5, 1.5);
             }
             res.q_iters += 1;
         }
@@ -453,7 +503,7 @@ pub fn evaluate_n2_woodbury(
     let mut pi_v = 0.0;
 
     for i in 0..n {
-        let vi = v[i];
+        let vi = ws.v[i];
         if vi < res.min_voltage {
             res.min_voltage = vi;
             res.min_voltage_bus = grid.buses[i].id;
@@ -489,16 +539,16 @@ pub fn evaluate_n2_woodbury(
         if idx == trip1 || idx == trip2 || br.status == 0 {
             continue;
         }
-        let bi = *grid.id_to_idx.get(&br.from).unwrap();
-        let bj = *grid.id_to_idx.get(&br.to).unwrap();
+        let bi = br.from_idx;
+        let bj = br.to_idx;
 
         let z2 = br.r * br.r + br.x * br.x;
         let g_ij = br.r / z2;
         let b_ij = -br.x / z2;
 
-        let vi = v[bi];
-        let vj = v[bj];
-        let d_theta = theta[bi] - theta[bj];
+        let vi = ws.v[bi];
+        let vj = ws.v[bj];
+        let d_theta = ws.theta[bi] - ws.theta[bj];
 
         let cos_th = d_theta.cos();
         let sin_th = d_theta.sin();
